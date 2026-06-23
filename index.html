@@ -395,6 +395,16 @@ function gSort(a, b) {
 
 function parseTime(s) { const [h,m] = s.split(':').map(Number); return h*60+m; }
 function fmtMin(m) { const h = Math.floor(m/60), r = m%60; if(h&&r) return h+'t '+r+'min'; return h ? h+'t' : r+'min'; }
+function timekode(fra, dato) {
+  if (dato) {
+    const dag = new Date(dato).getDay(); // 0=søn, 6=lør
+    if (dag === 0 || dag === 6) return 'TTM-2107';
+  }
+  const h = parseInt(fra.split(':')[0]);
+  if (h >= 21 || h < 7) return 'TTM-2107';
+  if (h >= 15) return 'TTM-1621';
+  return 'TTM-0716';
+}
 
 ['t-fra','t-til'].forEach(id => document.getElementById(id).addEventListener('input', () => {
   const f = document.getElementById('t-fra').value, t = document.getElementById('t-til').value;
@@ -498,7 +508,8 @@ function leggTilTid() {
   let min = parseTime(til)-parseTime(fra); if(min<0) min+=1440;
   if (!min) { snack('Fra og til er like','#dc2626'); return; }
   const dato = document.getElementById('t-dato').value, komm = document.getElementById('t-komm').value.trim();
-  getAkt().timer.push({id:Date.now(), fra, til, min, dato, komm});
+  const kode = timekode(fra, dato);
+  getAkt().timer.push({id:Date.now(), fra, til, min, dato, komm, kode});
   save();
   ['t-fra','t-til','t-komm'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('t-preview').textContent = '';
@@ -605,7 +616,7 @@ function renderTimer() {
       '<div class="time-entry-row">'+
         '<div class="time-entry-info">'+
           '<div class="time-range">'+t.fra+' – '+t.til+'</div>'+
-          '<div class="time-dur">'+fmtMin(t.min)+(t.dato?' · '+t.dato:'')+'</div>'+
+          '<div class="time-dur">'+fmtMin(t.min)+(t.dato?' · '+t.dato:'')+(t.kode?' · <span style="font-family:monospace;font-weight:700">'+t.kode+'</span>':'')+'</div>'+
           (t.komm?'<div class="time-komm">'+t.komm+'</div>':'')+
         '</div>'+
         '<button class="btn btn-red btn-sm btn-icon" onclick="slettTid('+j.id+','+t.id+')" aria-label="Slett"><i class="ti ti-trash"></i></button>'+
@@ -661,7 +672,7 @@ function renderRapport() {
   if (!S.jobber.length) { el.innerHTML='<div class="empty"><i class="ti ti-file-off"></i>Ingen jobber å vise</div>'; return; }
   el.innerHTML = S.jobber.map(j => {
     const tot = j.timer.reduce((s,t) => s+t.min, 0);
-    const tl  = j.timer.map(t => '  '+t.fra+'–'+t.til+' ('+fmtMin(t.min)+')'+(t.komm?' — '+t.komm:'')).join('\n');
+    const tl  = j.timer.map(t => '  '+t.fra+'–'+t.til+' ('+fmtMin(t.min)+')  '+(t.kode||timekode(t.fra,t.dato))+(t.komm?' — '+t.komm:'')).join('\n');
     const sortert = [...j.varer].map(v => { const k=klassifiser(v.navn); return Object.assign({},v,k); }).sort(gSort);
     const gr = {}; sortert.forEach(v => { if(!gr[v.gruppe]) gr[v.gruppe]=[]; gr[v.gruppe].push(v); });
     let vl = '';
