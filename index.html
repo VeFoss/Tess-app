@@ -396,14 +396,29 @@ function gSort(a, b) {
 function parseTime(s) { const [h,m] = s.split(':').map(Number); return h*60+m; }
 function fmtMin(m) { const h = Math.floor(m/60), r = m%60; if(h&&r) return h+'t '+r+'min'; return h ? h+'t' : r+'min'; }
 function timekode(fra, dato) {
-  if (dato) {
-    const dag = new Date(dato).getDay(); // 0=søn, 6=lør
-    if (dag === 0 || dag === 6) return 'TTM-2107';
-  }
+  if (dato) { const d = new Date(dato).getDay(); if (d===0||d===6) return 'TTM-2107'; }
   const h = parseInt(fra.split(':')[0]);
   if (h >= 21 || h < 7) return 'TTM-2107';
   if (h >= 15) return 'TTM-1621';
   return 'TTM-0716';
+}
+function minToStr(m) {
+  m = ((m % 1440) + 1440) % 1440;
+  return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+}
+function splittTimer(fra, til, dato) {
+  const isHelg = dato && [0,6].includes(new Date(dato).getDay());
+  let fraMin = parseTime(fra), tilMin = parseTime(til);
+  if (tilMin <= fraMin) tilMin += 1440;
+  if (isHelg) return [{fra, til: minToStr(tilMin), min: tilMin-fraMin, kode:'TTM-2107'}];
+  const grenser = [0, 7*60, 15*60, 21*60, 1440];
+  const koder   = ['TTM-2107','TTM-0716','TTM-1621','TTM-2107'];
+  const deler = [];
+  for (let i = 0; i < koder.length; i++) {
+    const s = Math.max(fraMin, grenser[i]), e = Math.min(tilMin, grenser[i+1]);
+    if (e > s) deler.push({fra: minToStr(s), til: minToStr(e), min: e-s, kode: koder[i]});
+  }
+  return deler;
 }
 
 ['t-fra','t-til'].forEach(id => document.getElementById(id).addEventListener('input', () => {
@@ -508,12 +523,13 @@ function leggTilTid() {
   let min = parseTime(til)-parseTime(fra); if(min<0) min+=1440;
   if (!min) { snack('Fra og til er like','#dc2626'); return; }
   const dato = document.getElementById('t-dato').value, komm = document.getElementById('t-komm').value.trim();
-  const kode = timekode(fra, dato);
-  getAkt().timer.push({id:Date.now(), fra, til, min, dato, komm, kode});
+  const deler = splittTimer(fra, til, dato);
+  const j = getAkt();
+  deler.forEach(d => j.timer.push({id:Date.now()+Math.random(), fra:d.fra, til:d.til, min:d.min, dato, komm, kode:d.kode}));
   save();
   ['t-fra','t-til','t-komm'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('t-preview').textContent = '';
-  snack('Tid registrert ✓'); render();
+  snack(deler.length > 1 ? 'Splittet i '+deler.length+' poster ✓' : 'Tid registrert ✓'); render();
 }
 function slettTid(jid, tid) {
   const j = S.jobber.find(x => x.id===jid);
