@@ -253,6 +253,36 @@ h3{font-size:14px;font-weight:700;color:var(--black)}
   </div>
 </div>
 
+<!-- MODAL REDIGER JOBB -->
+<div class="modal-bg" id="modal-rediger">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Rediger jobb</div>
+    <input type="hidden" id="rediger-id">
+    <label>Type</label>
+    <div id="rediger-type-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
+    <input type="hidden" id="rediger-type-val" value="felt">
+    <label>Kunde</label>
+    <input id="rediger-kunde">
+    <div class="ref-row">
+      <div><label>Deres ref.</label><input id="rediger-ordrenr"></div>
+      <div><label>Referanse</label><input id="rediger-kref"></div>
+    </div>
+    <label>Beskrivelse / oppdrag</label>
+    <input id="rediger-navn">
+    <div id="rediger-felt-felt">
+      <label>Fartøy / lokasjon</label>
+      <input id="rediger-lok">
+    </div>
+    <label>Dato</label>
+    <input type="date" id="rediger-dato">
+    <div class="btn-row">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-rediger')">Avbryt</button>
+      <button class="btn btn-primary" style="flex:2" onclick="lagreRedigertJobb()"><i class="ti ti-check"></i> Lagre</button>
+    </div>
+  </div>
+</div>
+
 <div class="snack" id="snack"></div>
 
 <script>
@@ -407,6 +437,52 @@ function lagreJobb() {
   ['ny-kunde','ny-ordrenr','ny-kref','ny-navn','ny-lok'].forEach(id => document.getElementById(id).value = '');
   snack('Jobb opprettet ✓'); render();
 }
+function byggRedigerTypeChips() {
+  const el = document.getElementById('rediger-type-chips');
+  const cur = document.getElementById('rediger-type-val').value;
+  el.innerHTML = '';
+  [{t:'felt',l:'Felt',i:'ti-tool'},{t:'butikk',l:'Butikk',i:'ti-building-store'},{t:'verksted',l:'Verksted',i:'ti-settings'}].forEach(o => {
+    const b = document.createElement('button');
+    b.innerHTML = '<i class="ti '+o.i+'"></i> '+o.l;
+    b.setAttribute('style', o.t===cur ? CHIP_S : CHIP_D);
+    b.onclick = () => {
+      document.getElementById('rediger-type-val').value = o.t;
+      document.getElementById('rediger-felt-felt').style.display = o.t==='felt' ? 'block' : 'none';
+      byggRedigerTypeChips();
+    };
+    el.appendChild(b);
+  });
+}
+function openRedigerJobb(id) {
+  const j = S.jobber.find(x => x.id===id); if (!j) return;
+  document.getElementById('rediger-id').value = id;
+  document.getElementById('rediger-type-val').value = j.type||'felt';
+  document.getElementById('rediger-kunde').value = j.kunde||'';
+  document.getElementById('rediger-ordrenr').value = j.ordrenr||'';
+  document.getElementById('rediger-kref').value = j.kref||'';
+  document.getElementById('rediger-navn').value = j.navn||'';
+  document.getElementById('rediger-lok').value = j.lokasjon||'';
+  document.getElementById('rediger-dato').value = j.dato||'';
+  document.getElementById('rediger-felt-felt').style.display = (j.type||'felt')==='felt' ? 'block' : 'none';
+  byggRedigerTypeChips();
+  openModal('modal-rediger');
+}
+function lagreRedigertJobb() {
+  const id = parseInt(document.getElementById('rediger-id').value);
+  const j = S.jobber.find(x => x.id===id); if (!j) return;
+  const kunde = document.getElementById('rediger-kunde').value.trim();
+  const navn  = document.getElementById('rediger-navn').value.trim();
+  if (!kunde||!navn) { snack('Fyll inn kunde og beskrivelse','#dc2626'); return; }
+  j.type     = document.getElementById('rediger-type-val').value;
+  j.kunde    = kunde;
+  j.ordrenr  = document.getElementById('rediger-ordrenr').value.trim();
+  j.kref     = document.getElementById('rediger-kref').value.trim();
+  j.navn     = navn;
+  j.lokasjon = document.getElementById('rediger-lok').value.trim();
+  j.dato     = document.getElementById('rediger-dato').value;
+  save(); closeModal('modal-rediger'); snack('Jobb oppdatert ✓'); render();
+}
+
 function settAktivt(id) { S.aktivt = id; save(); snack('Jobb aktivert'); render(); }
 function slettJobb(id) {
   if (!confirm('Slette jobben og all data?')) return;
@@ -497,8 +573,8 @@ function renderJobber() {
     return '<div class="opp-item'+(aktiv?' opp-aktiv':'')+'">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
         '<div style="flex:1;min-width:0">'+
-          '<div class="opp-name">'+j.navn+'</div>'+
-          '<div class="opp-meta">'+j.kunde+(j.lokasjon?' · '+j.lokasjon:'')+(j.dato?' · '+j.dato:'')+'</div>'+
+          '<div class="opp-name">'+j.kunde+'</div>'+
+          '<div class="opp-meta">'+j.navn+(j.lokasjon?' · '+j.lokasjon:'')+(j.dato?' · '+j.dato:'')+'</div>'+
           (refs?'<div class="opp-ref">'+refs+'</div>':'')+
         '</div>'+(aktiv?'<span class="badge b-green">Aktiv</span>':'')+
       '</div>'+
@@ -510,6 +586,7 @@ function renderJobber() {
       '<div class="opp-actions">'+
         (!aktiv?'<button class="btn btn-ghost btn-sm" onclick="settAktivt('+j.id+')"><i class="ti ti-bolt"></i> Aktiver</button>':'')+
         '<button class="btn btn-ghost btn-sm" onclick="gaaRapport('+j.id+')"><i class="ti ti-file-description"></i> Rapport</button>'+
+        '<button class="btn btn-ghost btn-sm btn-icon" onclick="openRedigerJobb('+j.id+')" aria-label="Rediger"><i class="ti ti-pencil"></i></button>'+
         '<button class="btn btn-red btn-sm btn-icon" style="margin-left:auto" onclick="slettJobb('+j.id+')" aria-label="Slett"><i class="ti ti-trash"></i></button>'+
       '</div>'+
     '</div>';
