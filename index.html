@@ -165,7 +165,10 @@ h3{font-size:14px;font-weight:700;color:var(--black)}
     <div class="card">
       <h3 style="margin-bottom:11px">Legg til</h3>
       <label>Varenr / beskrivelse</label>
-      <input id="v-navn" placeholder="5256-06, 65125-06, GW715399...">
+      <div style="position:relative">
+        <input id="v-navn" placeholder="5256-06, 65125-06, GW715399..." autocomplete="off" oninput="visVareforslag(this.value)">
+        <div id="vare-forslag" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid #dde0d8;border-top:none;border-radius:0 0 6px 6px;z-index:30;max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div><label>Antall</label><input type="number" id="v-antall" value="1" min="0.1" step="0.1"></div>
         <div><label>Enhet</label>
@@ -257,6 +260,35 @@ const FBTN_D = 'padding:5px 14px;border-radius:4px;font-size:13px;cursor:pointer
 const FBTN_S = 'padding:5px 14px;border-radius:4px;font-size:13px;cursor:pointer;border:1px solid #2d7d3a;color:#2d7d3a;background:#dcfce7;font-weight:600;font-family:system-ui,sans-serif;white-space:nowrap;-webkit-appearance:none';
 const CHIP_D = 'padding:7px 13px;border-radius:20px;font-size:13px;cursor:pointer;border:1px solid #9ca3af;color:#374151;background:#ffffff;display:inline-flex;align-items:center;gap:5px;font-family:system-ui,sans-serif;font-weight:500;-webkit-appearance:none';
 const CHIP_S = 'padding:7px 13px;border-radius:20px;font-size:13px;cursor:pointer;border:1px solid #2d7d3a;color:#2d7d3a;background:#dcfce7;display:inline-flex;align-items:center;gap:5px;font-family:system-ui,sans-serif;font-weight:600;-webkit-appearance:none';
+
+let KATALOG = [];
+fetch('varekatalog.json').then(r=>r.json()).then(d=>{ KATALOG = d; }).catch(()=>{});
+
+function visVareforslag(q) {
+  const el = document.getElementById('vare-forslag');
+  q = q.trim();
+  if (q.length < 2) { el.style.display='none'; return; }
+  const ql = q.toLowerCase();
+  const treff = KATALOG.filter(v => v.nr.toLowerCase().includes(ql) || v.navn.toLowerCase().includes(ql)).slice(0, 30);
+  if (!treff.length) { el.style.display='none'; return; }
+  el.innerHTML = treff.map(v =>
+    `<div onclick="velgVare('${v.nr.replace(/'/g,"\\'")}','${v.navn.replace(/'/g,"\\'")}' )" style="padding:10px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:14px" onmousedown="event.preventDefault()">
+      <span style="font-weight:600;color:#111">${v.nr}</span>
+      <span style="color:#6b7280;margin-left:8px;font-size:12px">${v.navn}</span>
+    </div>`
+  ).join('');
+  el.style.display='block';
+}
+
+function velgVare(nr, navn) {
+  document.getElementById('v-navn').value = nr;
+  document.getElementById('vare-forslag').style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#v-navn') && !e.target.closest('#vare-forslag'))
+    document.getElementById('vare-forslag').style.display = 'none';
+});
 
 let S = JSON.parse(localStorage.getItem('tess_v4') || '{"jobber":[],"aktivt":null,"bestillinger":[]}');
 if (!S.bestillinger) S.bestillinger = [];
