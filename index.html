@@ -211,6 +211,8 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
   const SB_URL = "https://lkynhhyicwfnuawwqmms.supabase.co";
   const SB_KEY = "sb_publishable_0th-iSSbJa3Z_8irbzE0uQ_VjvVjhxW";
   const CLOUD = STANDALONE && !!SB_URL;
+  // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
+  const SEND_FN = "hyper-function";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -1180,7 +1182,7 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
         btn.disabled = true; btn.textContent = "Sender …"; say("Sender rapporten …");
         const name = ("ordre-" + (j.kunde || "jobb") + "-" + (j.dato || today())).replace(/[^\wæøåÆØÅ.-]+/g, "_") + ".csv";
         try {
-          const { data, error } = await sb.functions.invoke("send-report", { body: { to, subject: mailSubject(j), text: summaryText(j), csv: $("#s-csv") && $("#s-csv").checked ? csvText(j) : "", csvName: name } });
+          const { data, error } = await sb.functions.invoke(SEND_FN, { body: { to, subject: mailSubject(j), text: summaryText(j), csv: $("#s-csv") && $("#s-csv").checked ? csvText(j) : "", csvName: name } });
           if (error || !data || !data.ok) {
             let code = data && data.error;
             if (!code && error && error.context && error.context.json) { try { code = (await error.context.json()).error; } catch (x) {} }
