@@ -81,8 +81,8 @@ h1, h2, h3 { font-family: var(--f-display); font-weight: 700; margin: 0; text-wr
 
 .tabs { background: var(--surface); border-bottom: 2px solid var(--line); position: sticky; top: calc(env(safe-area-inset-top, 0px) + 72px); z-index: 4; }
 .tabs-in { max-width: 760px; margin: 0 auto; display: flex; overflow-x: auto; scrollbar-width: none; }
-.tab { flex: 1 0 64px; border: 0; background: none; padding: 10px 4px 8px; cursor: pointer; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -2px; display: grid; justify-items: center; gap: 3px; font-size: 14px; position: relative; }
-.tab svg { width: 24px; height: 24px; }
+.tab { flex: 1 0 56px; border: 0; background: none; padding: 10px 2px 8px; cursor: pointer; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -2px; display: grid; justify-items: center; gap: 3px; font-size: 13px; position: relative; }
+.tab svg { width: 22px; height: 22px; }
 .tab[aria-selected="true"] { color: var(--brand); border-bottom-color: var(--brand); font-weight: 700; }
 .tab .c { position: absolute; top: 4px; left: calc(50% + 10px); font: 500 11px/1 var(--f-mono); background: var(--tint); color: var(--brand); border-radius: 999px; padding: 3px 5px; }
 
@@ -383,7 +383,7 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
     send: ico('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>'),
     orders: ico('<circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/><path d="M2.5 3.5h3l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L21 8H6.3"/>')
   };
-  const TABS = [["info", "Jobb"], ["hoses", "Slanger"], ["items", "Varer"], ["hours", "Timer"], ["notes", "Notater"], ["send", "Rapport"]];
+  const TABS = [["info", "Jobb"], ["hoses", "Slanger"], ["items", "Varer"], ["hours", "Timer"], ["orders", "Bestill"], ["notes", "Notater"], ["send", "Rapport"]];
   const STATUS = { aktiv: "Pågår", ferdig: "Ferdig", sendt: "Sendt" };
 
   // ---------- state ----------
@@ -768,6 +768,11 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
         for (const { r } of g.rows) line(`  ${qtyStr(r.qty)} ${r.unit || "stk"}  ${[r.nr, r.desc || katName(r.nr)].filter(Boolean).join("  ")}${r.note ? " (" + r.note + ")" : ""}`);
       }
     }
+    const ord = jobOrders(job.id).filter((o) => o.status !== "mottatt");
+    if (ord.length) {
+      hr(); line("MÅ BESTILLES:");
+      for (const o of ord) line(`  ${qtyStr(o.antall)} ${o.enhet || "stk"}  ${o.navn}${o.lev ? "  (" + o.lev + ")" : ""}${o.merk ? "  – " + o.merk : ""}  [${ORDER_STATUS[o.status] || "Venter"}]`);
+    }
     if (job.notes) { hr(); line("NOTATER / AVVIK"); line(job.notes); }
     return L.join("\n");
   }
@@ -847,32 +852,42 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
       <span class="stripe"></span>
       <span class="grow"><span class="jt">${esc(j.kunde || "Uten kunde")}${j.example ? ' <span class="ex">Eksempel</span>' : ""}</span><span class="meta">${esc([j.beskrivelse, j.sted, fmtDate(j.dato), j.ordrenr && "Ordre " + j.ordrenr].filter(Boolean).join(" · "))}</span></span>
       <span class="pill ${st}">${STATUS[st]}</span>
-      <span class="stats"><span class="tb ${jt}">${JTYPES[jt]}</span>${s.count ? `<span><b class="num">${s.count}</b> slanger</span>` : ""}${(j.items || []).length ? `<span><b class="num">${j.items.length}</b> varer</span>` : ""}${h.tot ? `<span><b class="num">${fmtMin(h.tot)}</b></span>` : ""}</span>
+      <span class="stats"><span class="tb ${jt}">${JTYPES[jt]}</span>${s.count ? `<span><b class="num">${s.count}</b> slanger</span>` : ""}${(j.items || []).length ? `<span><b class="num">${j.items.length}</b> varer</span>` : ""}${h.tot ? `<span><b class="num">${fmtMin(h.tot)}</b></span>` : ""}${(() => { const n = jobOrders(j.id).filter((o) => o.status !== "mottatt").length; return n ? `<span><b class="num">${n}</b> til bestilling</span>` : ""; })()}</span>
     </button>`;
   }
 
-  function ordersView() {
-    const list = S.orders.filter((o) => S.ofilter === "alle" || o.status === S.ofilter);
-    const nDone = S.orders.filter((o) => o.status === "mottatt").length;
+  const jobLabel = (id) => { const j = S.jobs[id]; return j ? [j.kunde || "Uten kunde", j.beskrivelse].filter(Boolean).join(" – ") : "Slettet jobb"; };
+  const jobOrders = (id) => S.orders.filter((o) => (o.jobId || "") === id);
+  // Order form and list. With a job id the panel shows only that job's orders; without, it is the overview across all jobs.
+  function ordersPanel(jobId) {
+    const scope = jobId ? jobOrders(jobId) : S.orders;
+    const list = scope.filter((o) => S.ofilter === "alle" || o.status === S.ofilter);
+    const nDone = scope.filter((o) => o.status === "mottatt").length;
     const rows = list.length ? `<div class="ledger">${list.map((o) => `<div class="lrow ${o.status === "mottatt" ? "done" : ""}"><span class="tag num">${qtyStr(o.antall)}</span>
-        <div class="main"><strong>${esc(o.navn)}</strong>${katName(o.navn) ? ` <span class="d">${esc(katName(o.navn))}</span>` : ""}<div class="d">${esc([o.enhet, o.lev, o.merk].filter(Boolean).join(" · "))}</div></div>
+        <div class="main"><strong>${esc(o.navn)}</strong>${katName(o.navn) ? ` <span class="d">${esc(katName(o.navn))}</span>` : ""}<div class="d">${esc([o.enhet, o.lev, o.merk].filter(Boolean).join(" · "))}</div>
+        ${!jobId ? (o.jobId ? `<button class="btn sm ghost" data-a="open" data-id="${esc(o.jobId)}" data-tab="orders">${esc(jobLabel(o.jobId))}</button>` : `<div class="d">Ikke knyttet til jobb</div>`) : ""}</div>
         <span class="acts"><button class="pill ${o.status}" data-a="ocycle" data-id="${esc(o.id)}" title="Trykk for å endre status">${ORDER_STATUS[o.status] || "Venter"}</button><button class="btn sm danger ${S.armed === "o" + o.id ? "armed" : ""}" data-a="odel" data-id="${esc(o.id)}" aria-label="Slett">${S.armed === "o" + o.id ? "Slett?" : "×"}</button></span></div>`).join("")}</div>`
-      : `<p class="hint">Ingen bestillinger her.</p>`;
-    return header("", "Må bestilles", "", `<button class="iconbtn" data-a="settings">Innstillinger</button>`) + homeTabs() +
-      `<main><form class="panel" id="form-orders"><h2>Legg til bestilling</h2><div class="form">${ORDER_FIELDS.map((f) => fieldHtml(f, f.def || "", "o-")).join("")}</div>
+      : `<p class="hint">${jobId ? "Ingenting å bestille til denne jobben ennå." : "Ingen bestillinger her."}</p>`;
+    return `<form class="panel" id="form-orders" data-job="${esc(jobId || "")}"><h2>${jobId ? "Må bestilles til jobben" : "Legg til bestilling"}</h2>
+      ${jobId ? "" : `<p class="hint">Bestillinger til en bestemt jobb legger du inn under fanen Bestill i jobben.</p>`}
+      <div class="form">${ORDER_FIELDS.map((f) => fieldHtml(f, f.def || "", "o-")).join("")}</div>
       <div class="row"><button class="btn primary" type="submit">+ Legg til</button></div></form>
-      <section class="panel"><div class="row"><h2 class="grow">Må bestilles</h2>${nDone ? `<button class="btn sm ghost" data-a="oclear">Fjern mottatte (${nDone})</button>` : ""}</div>
+      <section class="panel"><div class="row"><h2 class="grow">${jobId ? "Bestillinger" : "Alle bestillinger"}</h2>${nDone ? `<button class="btn sm ghost" data-a="oclear" data-job="${esc(jobId || "")}">Fjern mottatte (${nDone})</button>` : ""}</div>
       ${chips("ofilter", S.ofilter, [["alle", "Alle"], ["venter", "Venter"], ["bestilt", "Bestilt"], ["mottatt", "Mottatt"]])}
-      <p class="hint">Trykk på statusen for å flytte en vare fra Venter til Bestilt og Mottatt.</p>${rows}</section></main>`;
+      <p class="hint">Trykk på statusen for å flytte en vare fra Venter til Bestilt og Mottatt.</p>${rows}</section>`;
+  }
+  function ordersView() {
+    return header("", "Må bestilles", "", `<button class="iconbtn" data-a="settings">Innstillinger</button>`) + homeTabs() + `<main>${ordersPanel(null)}</main>`;
   }
 
   function jobView(j) {
-    const counts = { hoses: (j.hoses || []).length, items: (j.items || []).length, hours: hourSums(j).tot ? fmtMin(hourSums(j).tot) : 0 };
+    const counts = { hoses: (j.hoses || []).length, items: (j.items || []).length, hours: hourSums(j).tot ? fmtMin(hourSums(j).tot) : 0, orders: jobOrders(j.id).filter((o) => o.status !== "mottatt").length };
     const tabs = `<nav class="tabs"><div class="tabs-in" role="tablist">${TABS.map(([k, l]) => `<button class="tab" role="tab" data-a="tab" data-v="${k}" aria-selected="${S.tab === k}">${ICONS[k]}<span>${l}</span>${counts[k] ? `<span class="c">${counts[k]}</span>` : ""}</button>`).join("")}</div></nav>`;
     let content;
     if (S.tab === "info") content = infoTab(j);
     else if (S.tab === "notes") content = notesTab(j);
     else if (S.tab === "send") content = sendTab(j);
+    else if (S.tab === "orders") content = ordersPanel(j.id);
     else content = modTab(j, S.tab);
     return header(j.kunde || "Ny jobb", [STATUS[j.status || "aktiv"], j.beskrivelse].filter(Boolean).join(" · "), `<button class="iconbtn" data-a="back" aria-label="Tilbake til jobblisten">‹ Jobber</button>`) + tabs + `<main>${content}</main>`;
   }
@@ -1099,7 +1114,7 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
       case "syncnow": await syncNow(); S.keepScroll = true; render(); break;
       case "new": S.home = "jobs"; newJob(false); break;
       case "example": newJob(true); break;
-      case "open": S.view = "job"; S.jobId = b.dataset.id; S.tab = "info"; S.edit = null; render(); window.scrollTo(0, 0); break;
+      case "open": if (!S.jobs[b.dataset.id]) break; S.view = "job"; S.jobId = b.dataset.id; S.tab = b.dataset.tab || "info"; S.edit = null; render(); window.scrollTo(0, 0); break;
       case "back": S.view = "list"; S.jobId = null; S.edit = null; render(); window.scrollTo(0, 0); break;
       case "settings": S.view = "settings"; render(); break;
       case "home": S.home = b.dataset.v; render(); window.scrollTo(0, 0); break;
@@ -1111,7 +1126,9 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
       case "jtype": j.jtype = b.dataset.v; touch(j.id); S.keepScroll = true; render(); break;
       case "deljob":
         if (S.armed !== "del") { S.armed = "del"; S.keepScroll = true; render(); return; }
-        S.armed = null; delete S.jobs[j.id]; dirty.add(j.id); flush(j.id); S.view = "list"; S.jobId = null; render(); toast("Jobben er slettet"); break;
+        S.armed = null; delete S.jobs[j.id]; dirty.add(j.id); flush(j.id);
+        if (jobOrders(j.id).length) { S.orders = S.orders.filter((o) => o.jobId !== j.id); touch("orders"); }
+        S.view = "list"; S.jobId = null; render(); toast("Jobben er slettet"); break;
       case "editrow": S.edit = { mod: b.dataset.m, idx: +b.dataset.i }; render(); window.scrollTo(0, 0); break;
       case "canceledit": S.edit = null; render(); break;
       case "delrow": {
@@ -1125,7 +1142,12 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
         if (S.armed !== key) { S.armed = key; S.keepScroll = true; render(); return; }
         S.armed = null; S.orders = S.orders.filter((x) => x.id !== b.dataset.id); touch("orders"); S.keepScroll = true; render(); break;
       }
-      case "oclear": { const n = S.orders.filter((x) => x.status === "mottatt").length; S.orders = S.orders.filter((x) => x.status !== "mottatt"); touch("orders"); toast(n + " fjernet"); S.keepScroll = true; render(); break; }
+      case "oclear": {
+        const jid = b.dataset.job || "";
+        const gone = (x) => x.status === "mottatt" && (!jid || x.jobId === jid);
+        const n = S.orders.filter(gone).length;
+        S.orders = S.orders.filter((x) => !gone(x)); touch("orders"); toast(n + " fjernet"); S.keepScroll = true; render(); break;
+      }
       case "copy": {
         const txt = summaryText(j);
         try { await navigator.clipboard.writeText(txt); toast("Teksten er kopiert"); }
@@ -1159,7 +1181,7 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
     if (form.id === "form-orders") {
       const o = readForm(form, ORDER_FIELDS);
       if (!o.navn) { toast("Skriv inn vare eller beskrivelse"); $("#o-navn").focus(); return; }
-      S.orders.unshift(Object.assign({ id: "o-" + uid8(), status: "venter" }, o, { antall: o.antall || "1" }));
+      S.orders.unshift(Object.assign({ id: "o-" + uid8(), status: "venter", jobId: form.dataset.job || "" }, o, { antall: o.antall || "1" }));
       touch("orders"); toast("Lagt til"); render();
       const n = $("#o-navn"); if (n) n.focus();
       return;
