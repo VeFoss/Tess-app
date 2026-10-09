@@ -1,770 +1,727 @@
-<!DOCTYPE html>
-<html lang="no">
+<doctype html>
+<html lang="nb">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2b7a3b">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Tess Mobilservice">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Tess Mobilservice</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Jobbkort">
+<title>TESS Jobbkort</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100,600;100,700;125,800;125,900&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
-:root{--green:#2a7a38;--green-dark:#1f6029;--green-deep:#164520;--black:#111;--white:#fff;--bg:#f4f5f3;--border:#dde0d8;--muted:#6b7280}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background-color:var(--bg);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='800' viewBox='0 0 500 800'%3E%3Cpath d='M-60,0 L40,0 L240,400 L40,800 L-60,800 L140,400 Z' fill='%233aab4a' fill-opacity='0.07'/%3E%3Cpath d='M120,0 L220,0 L420,400 L220,800 L120,800 L320,400 Z' fill='%233aab4a' fill-opacity='0.09'/%3E%3Cpath d='M300,0 L400,0 L600,400 L400,800 L300,800 L500,400 Z' fill='%233aab4a' fill-opacity='0.11'/%3E%3C/svg%3E");background-size:500px 800px;background-repeat:no-repeat;background-position:center;color:var(--black);font-family:system-ui,-apple-system,sans-serif;font-size:15px;min-height:100vh}
-.app{max-width:480px;margin:0 auto;padding-bottom:84px}
+/* Layout: one-column field tool in the green workshop profile. Green header with wordmark, icon tab bar, chevron ground; forms on top, logged rows below as a ledger. */
+:root {
+  --bg: #f3f4f0;
+  --surface: #ffffff;
+  --sunk: #f6f7f4;
+  --ink: #1b211c;
+  --muted: #5e6a60;
+  --line: #d4dad2;
+  --brand: #2b7a3b;
+  --brand-deep: #1f6030;
+  --on-brand: #ffffff;
+  --tint: #e2f1e2;
+  --accent: #2b7a3b;
+  --accent-ink: #ffffff;
+  --steel: #3a6d8e;
+  --ok: #2b7a3b;
+  --warn: #b5650a;
+  --danger: #b3261e;
+  --chev-op: .075;
+  --f-display: "Archivo", "Arial Black", "Helvetica Neue", Arial, sans-serif;
+  --f-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --r: 10px;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f140f; --surface: #182019; --sunk: #131a14; --ink: #e6ebe5; --muted: #9aa79b; --line: #2b372c;
+    --brand: #25693a; --brand-deep: #1a4f2a; --tint: #1c3321; --accent: #3d9a51; --accent-ink: #ffffff;
+    --steel: #86b6d6; --ok: #6cc58a; --warn: #f0a24a; --danger: #ff7b72; --chev-op: .05;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f140f; --surface: #182019; --sunk: #131a14; --ink: #e6ebe5; --muted: #9aa79b; --line: #2b372c;
+  --brand: #25693a; --brand-deep: #1a4f2a; --tint: #1c3321; --accent: #3d9a51; --accent-ink: #ffffff;
+  --steel: #86b6d6; --ok: #6cc58a; --warn: #f0a24a; --danger: #ff7b72; --chev-op: .05;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.45 var(--f-body); min-height: 100vh; }
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: var(--chev-op);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 800' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='%232b7a3b'%3E%3Cpolygon points='-170,0 -60,0 140,400 -60,800 -170,800 30,400'/%3E%3Cpolygon points='90,0 200,0 400,400 200,800 90,800 290,400'/%3E%3Cpolygon points='350,0 460,0 660,400 460,800 350,800 550,400'/%3E%3C/g%3E%3C/svg%3E") center / cover no-repeat; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; margin: 0; text-wrap: balance; }
 
-/* NAV */
-.nav{background:var(--green);padding:0 16px;height:60px;display:flex;align-items:center;gap:0;position:sticky;top:0;z-index:20;overflow:hidden}
-.nav-logo{height:36px;width:auto;flex-shrink:0;filter:brightness(0) invert(1)}
-.nav-chevrons{display:flex;align-items:center;margin-left:10px;gap:0;flex-shrink:0}
-.nav-chevrons svg{width:72px;height:38px}
-.nav-sub{font-size:12px;color:rgba(255,255,255,0.75);margin-left:auto;max-width:180px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--brand); color: var(--on-brand); }
+.top-in { max-width: 760px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; min-height: 72px; }
+.top h1 { font-size: 22px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top .sub { font-size: 13px; opacity: .85; }
+.wm { display: grid; line-height: 1; flex: none; }
+.wm-a { font: 900 34px/0.9 var(--f-display); font-stretch: 125%; letter-spacing: -.01em; }
+.wm-b { font: 600 10.5px var(--f-display); font-stretch: 125%; letter-spacing: .02em; margin-top: 4px; }
+.top-right { margin-left: auto; text-align: right; display: grid; gap: 2px; justify-items: end; min-width: 0; }
+.top-right .sub { font-size: 15px; opacity: .9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.iconbtn { background: transparent; border: 1px solid color-mix(in srgb, var(--on-brand) 45%, transparent); color: var(--on-brand); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+.savestate { font-size: 12px; opacity: .8; white-space: nowrap; }
+.savestate.err { color: #ffd88a; opacity: 1; }
 
-/* TABS */
-.tabs{display:flex;background:var(--white);border-bottom:2px solid var(--border);position:sticky;top:60px;z-index:19}
-.tab{flex:1;padding:10px 2px;text-align:center;font-size:11px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;display:flex;flex-direction:column;align-items:center;gap:2px;font-family:system-ui,sans-serif;background:none;border-top:none;border-left:none;border-right:none}
-.tab i{font-size:18px}
-.tab.active{color:var(--green-dark);border-bottom-color:var(--green);font-weight:700}
+.tabs { background: var(--surface); border-bottom: 2px solid var(--line); position: sticky; top: calc(env(safe-area-inset-top, 0px) + 72px); z-index: 4; }
+.tabs-in { max-width: 760px; margin: 0 auto; display: flex; overflow-x: auto; scrollbar-width: none; }
+.tab { flex: 1 0 64px; border: 0; background: none; padding: 10px 4px 8px; cursor: pointer; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -2px; display: grid; justify-items: center; gap: 3px; font-size: 14px; position: relative; }
+.tab svg { width: 24px; height: 24px; }
+.tab[aria-selected="true"] { color: var(--brand); border-bottom-color: var(--brand); font-weight: 700; }
+.tab .c { position: absolute; top: 4px; left: calc(50% + 10px); font: 500 11px/1 var(--f-mono); background: var(--tint); color: var(--brand); border-radius: 999px; padding: 3px 5px; }
 
-/* PAGES & CARDS */
-.page{display:none;padding:14px}
-.page.active{display:block}
-.card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:15px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.sec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px;margin-top:11px;font-weight:500}
-label:first-child{margin-top:0}
-input,select,textarea{width:100%;background:#f9fafb;border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--black);font-size:15px;font-family:system-ui,sans-serif;outline:none;-webkit-appearance:none}
-input:focus,select:focus,textarea:focus{border-color:var(--green);background:var(--white);box-shadow:0 0 0 3px rgba(58,171,74,.12)}
-input[type=time],input[type=date]{font-variant-numeric:tabular-nums}
-textarea{min-height:60px;resize:vertical}
+main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16px 64px; display: grid; gap: 16px; }
+.banner { background: color-mix(in srgb, var(--warn) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); border-radius: var(--r); padding: 10px 14px; font-size: 14px; }
 
-/* BUTTONS */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;line-height:1;white-space:nowrap;font-family:system-ui,sans-serif;border:1px solid transparent;-webkit-appearance:none;letter-spacing:.01em}
-.btn-primary{background:var(--green) !important;color:var(--white) !important;border-color:var(--green-dark) !important}
-.btn-primary:active{background:var(--green-dark) !important}
-.btn-ghost{background:var(--white) !important;color:var(--black) !important;border:1px solid #ccc !important}
-.btn-red{background:#fee2e2 !important;color:#dc2626 !important;border:1px solid #fca5a5 !important}
-.btn-sm{padding:6px 11px;font-size:13px}
-.btn-full{width:100%}
-.btn-icon{width:34px;height:34px;padding:0;flex-shrink:0}
-.btn-row{display:flex;gap:8px;margin-top:12px}
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; color: var(--ink); }
+.btn.primary { background: var(--accent); border-color: var(--brand-deep); color: var(--accent-ink); }
+.btn.dark { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); background: transparent; }
+.btn.danger.armed { background: var(--danger); color: #fff; }
+.btn.sm { min-height: 34px; padding: 4px 10px; font-size: 14px; }
+.btn:focus-visible, .tab:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .jobcard:focus-visible { outline: 3px solid var(--steel); outline-offset: 2px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.grow { flex: 1; min-width: 0; }
 
-/* BADGES */
-.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700;line-height:1.4}
-.b-green{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
-.b-blue{background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe}
-.b-amber{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
-.b-pur{background:#ede9fe;color:#5b21b6;border:1px solid #ddd6fe}
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 14px; }
+.panel h2 { font-size: 22px; }
+.label { font: 600 12px var(--f-body); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
 
-/* JOB ITEMS */
-.opp-item{background:var(--white);border:1px solid var(--border);border-left:4px solid var(--border);border-radius:10px;padding:13px 14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-.opp-item.opp-aktiv{border-left-color:var(--green)}
-.opp-name{font-size:15px;font-weight:700;color:var(--black)}
-.opp-meta{font-size:12px;color:var(--muted);margin-top:3px}
-.opp-ref{font-size:12px;color:#2563eb;margin-top:2px;font-family:monospace}
-.opp-badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
-.opp-actions{display:flex;gap:6px;margin-top:10px;align-items:center}
+.form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 10px; }
+.fld { display: grid; gap: 4px; min-width: 0; }
+.fld.w1 { grid-column: span 1; } .fld.w2 { grid-column: span 2; } .fld.w3 { grid-column: span 3; } .fld.w4 { grid-column: span 4; }
+.fld label { font: 600 13px var(--f-body); color: var(--muted); }
+.fld input, .fld select, .fld textarea { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--sunk); border-radius: 8px; padding: 10px 10px; min-height: 44px; }
+.fld textarea { min-height: 110px; resize: vertical; }
+.fld input:focus, .fld select:focus, .fld textarea:focus { background: var(--surface); border-color: var(--steel); }
+@media (max-width: 520px) {
+  .form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fld.w3, .fld.w4 { grid-column: span 2; }
+  .fld.w2.wide-m { grid-column: span 2; }
+}
 
-/* VARER / TIME ROWS */
-.vare-row{display:flex;align-items:center;background:#f9fafb;border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:5px;gap:10px}
-.vare-info{flex:1;min-width:0}
-.vare-name{font-size:14px;font-weight:500;color:var(--black);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.vare-det{font-size:12px;color:var(--muted);margin-top:1px}
-.gruppe-header{display:flex;align-items:center;gap:8px;padding:6px 0 4px;margin-top:6px}
-.gruppe-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-.gruppe-line{flex:1;height:1px;background:var(--border)}
-.time-entry-row{display:flex;align-items:center;background:#f9fafb;border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:5px;gap:10px}
-.time-entry-info{flex:1;min-width:0}
-.time-range{font-size:15px;font-weight:500;color:var(--black);font-variant-numeric:tabular-nums}
-.time-dur{font-size:12px;color:var(--green-dark);margin-top:2px;font-weight:700}
-.time-komm{font-size:12px;color:var(--muted);margin-top:1px}
-.time-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.ref-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.best-row{display:flex;align-items:center;background:#f9fafb;border:1px solid var(--border);border-radius:6px;padding:11px 12px;margin-bottom:5px;gap:10px}
-.best-row.done{opacity:.45}
-.best-info{flex:1;min-width:0}
-.best-name{font-size:14px;font-weight:500;color:var(--black)}
-.best-det{font-size:12px;color:var(--muted);margin-top:2px}
-.copybox{background:#f9fafb;border:1px solid var(--border);border-radius:6px;padding:12px;font-size:12px;color:#374151;white-space:pre-line;line-height:1.75;margin-bottom:10px;max-height:240px;overflow-y:auto;font-family:monospace}
-.filter-row{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
-.filter-row::-webkit-scrollbar{display:none}
+/* Job list */
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.search { flex: 1 1 200px; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 10px 12px; min-height: 44px; }
+.seg { display: flex; flex-wrap: wrap; gap: 8px; }
+.seg button { border: 1.5px solid var(--line); background: var(--surface); border-radius: 6px; padding: 8px 14px; cursor: pointer; font-weight: 500; color: var(--ink); min-height: 44px; }
+.seg button[aria-pressed="true"] { background: var(--tint); border-color: var(--brand); color: var(--brand); }
+.pagehead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pagehead h2 { font-size: 26px; flex: 1; }
+.joblist { display: grid; gap: 10px; }
+.jobcard { display: grid; grid-template-columns: 6px 1fr auto; gap: 0 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 14px 14px 0; cursor: pointer; text-align: left; width: 100%; overflow: hidden; }
+.jobcard .stripe { grid-row: 1 / span 3; border-radius: 0 4px 4px 0; background: var(--steel); }
+.jobcard.ferdig .stripe { background: var(--accent); }
+.jobcard.sendt .stripe { background: var(--ok); }
+.jobcard .jt { display: block; font: 700 20px/1.2 var(--f-display); min-width: 0; overflow-wrap: anywhere; }
+.jobcard .meta { display: block; color: var(--muted); font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
+.jobcard .stats { grid-column: 2 / span 2; display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.jobcard .stats b { color: var(--ink); font-weight: 500; }
+.pill { font: 600 11px var(--f-body); letter-spacing: .08em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; align-self: start; white-space: nowrap; border: 1px solid currentColor; }
+.pill.aktiv { color: var(--steel); } .pill.ferdig { color: var(--warn); } .pill.sendt { color: var(--ok); }
 
-/* MODALS */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:none;align-items:flex-end;justify-content:center}
-.modal-bg.open{display:flex}
-.modal{background:var(--white);border-radius:16px 16px 0 0;padding:20px 16px 40px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
-.modal-title{font-size:17px;font-weight:800;margin-bottom:14px;color:var(--black)}
+.empty { text-align: center; padding: 40px 16px; display: grid; gap: 12px; justify-items: center; color: var(--muted); }
+.empty h2 { color: var(--ink); font-size: 26px; }
+.empty p { max-width: 42ch; margin: 0; }
 
-/* MISC */
-.empty{text-align:center;padding:36px 20px;color:#9ca3af}
-.empty i{font-size:38px;opacity:.2;display:block;margin-bottom:8px}
-.snack{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:var(--green-dark);color:var(--white);padding:10px 20px;border-radius:8px;font-size:14px;font-weight:700;z-index:100;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.25)}
-.snack.show{opacity:1}
-h2{font-size:17px;font-weight:800;color:var(--black)}
-h3{font-size:14px;font-weight:700;color:var(--black)}
+/* Ledger rows */
+.ledger { display: grid; gap: 0; border-top: 1px solid var(--line); }
+.lrow { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: start; }
+.lrow.editing { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.lrow .tag { font: 500 13px var(--f-mono); background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; min-width: 2.4em; text-align: center; }
+.lrow .main { min-width: 0; overflow-wrap: anywhere; }
+.lrow .main strong { font-weight: 600; }
+.lrow .main .d { color: var(--muted); font-size: 14px; }
+.lrow .acts { display: flex; gap: 6px; }
+.lrow .big { font: 500 15px var(--f-mono); white-space: nowrap; }
+
+.totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.tot { background: var(--sunk); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+.tot .v { font: 500 20px var(--f-mono); }
+.tot .k { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.sumtable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.sumtable td { padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.sumtable td:last-child { text-align: right; font-family: var(--f-mono); white-space: nowrap; padding-left: 12px; }
+
+.preview { background: var(--sunk); border: 1px solid var(--line); border-radius: 8px; padding: 14px; font: 500 13px/1.5 var(--f-mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 420px; overflow: auto; }
+.hint { font-size: 14px; color: var(--muted); margin: 0; }
+.statusbar { display: flex; flex-wrap: wrap; gap: 8px; }
+.toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-weight: 600; z-index: 20; max-width: calc(100% - 32px); }
+.ex { font: 600 11px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--warn); }
+@media (prefers-reduced-motion: no-preference) { .jobcard { transition: border-color .15s; } .jobcard:hover { border-color: var(--steel); } }
 </style>
 </head>
 <body>
-<div class="app">
-  <div class="nav">
-    <img class="nav-logo" src="tess-logo.png" alt="TESS">
-    <div class="nav-sub" id="nav-sub">Ingen aktiv jobb</div>
-  </div>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="jobber"><i class="ti ti-clipboard-list"></i>Jobber</button>
-    <button class="tab" data-tab="timer"><i class="ti ti-clock"></i>Timer</button>
-    <button class="tab" data-tab="varer"><i class="ti ti-package"></i>Varer</button>
-    <button class="tab" data-tab="bestilling"><i class="ti ti-shopping-cart"></i>Bestill</button>
-    <button class="tab" data-tab="rapport"><i class="ti ti-file-description"></i>Rapport</button>
-  </div>
-
-  <!-- JOBBER -->
-  <div class="page active" id="page-jobber">
-    <div class="sec-head">
-      <h2>Jobber</h2>
-      <button class="btn btn-primary btn-sm" onclick="openNyJobb()"><i class="ti ti-plus"></i> Ny jobb</button>
-    </div>
-    <div class="filter-row" id="jobb-filter"></div>
-    <div id="jobb-list"></div>
-  </div>
-
-  <!-- TIMER -->
-  <div class="page" id="page-timer">
-    <div class="sec-head">
-      <h2>Timer</h2>
-      <span class="badge b-green" id="timer-badge">Ingen jobb</span>
-    </div>
-    <div class="card">
-      <h3 style="margin-bottom:12px">Registrer tid</h3>
-      <div class="time-grid">
-        <div><label>Fra</label><input type="time" id="t-fra"></div>
-        <div><label>Til</label><input type="time" id="t-til"></div>
-      </div>
-      <label>Dato</label><input type="date" id="t-dato">
-      <label>Hva ble gjort</label><input id="t-komm" placeholder="Beskriv arbeidet...">
-      <div style="margin-top:12px;display:flex;align-items:center;gap:10px">
-        <button class="btn btn-primary" style="flex:1" onclick="leggTilTid()"><i class="ti ti-plus"></i> Legg til</button>
-        <div id="t-preview" style="font-size:14px;color:#2d7d3a;font-weight:600;min-width:60px;text-align:right"></div>
-      </div>
-    </div>
-    <div id="timer-log"></div>
-  </div>
-
-  <!-- VARER -->
-  <div class="page" id="page-varer">
-    <div class="sec-head">
-      <h2>Materiell</h2>
-      <span class="badge b-green" id="varer-badge">Ingen jobb</span>
-    </div>
-    <div class="card">
-      <h3 style="margin-bottom:11px">Legg til</h3>
-      <label>Varenr / beskrivelse</label>
-      <div style="position:relative">
-        <input id="v-navn" placeholder="5256-06, 65125-06, GW715399..." autocomplete="off" oninput="visVareforslag(this.value)">
-        <div id="vare-forslag" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid #dde0d8;border-top:none;border-radius:0 0 6px 6px;z-index:30;max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><label>Antall</label><input type="number" id="v-antall" value="1" min="0.1" step="0.1"></div>
-        <div><label>Enhet</label>
-          <select id="v-enhet"><option>stk</option><option>m</option><option>dm</option><option>liter</option><option>kg</option><option>sett</option><option>pose</option></select>
-        </div>
-      </div>
-      <label>Kommentar</label>
-      <input id="v-komm" placeholder="Posisjon, farge, ekstra info...">
-      <button class="btn btn-primary btn-full" style="margin-top:11px" onclick="leggTilVare()"><i class="ti ti-plus"></i> Legg til</button>
-    </div>
-    <div id="vare-list"></div>
-  </div>
-
-  <!-- BESTILLING -->
-  <div class="page" id="page-bestilling">
-    <div class="sec-head">
-      <h2>Må bestilles</h2>
-      <button class="btn btn-primary btn-sm" onclick="openModal('modal-best')"><i class="ti ti-plus"></i> Legg til</button>
-    </div>
-    <div class="filter-row" id="best-filter"></div>
-    <div id="best-list"></div>
-    <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="slettMottatte()"><i class="ti ti-trash"></i> Fjern mottatte</button>
-  </div>
-
-  <!-- RAPPORT -->
-  <div class="page" id="page-rapport">
-    <h2 style="margin-bottom:12px">Rapport</h2>
-    <div id="rapport-content"></div>
-  </div>
-</div>
-
-<!-- MODAL NY JOBB -->
-<div class="modal-bg" id="modal-jobb">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Ny jobb</div>
-    <label>Type</label>
-    <div id="jobb-type-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
-    <input type="hidden" id="jobb-type-val" value="felt">
-    <label>Kunde</label>
-    <input id="ny-kunde" placeholder="Equinor, DeepOcean, Privat...">
-    <div class="ref-row">
-      <div><label>Deres ref.</label><input id="ny-ordrenr" placeholder="Vår ordrenr"></div>
-      <div><label>Referanse</label><input id="ny-kref" placeholder="Kundens PO / ref"></div>
-    </div>
-    <label>Beskrivelse / oppdrag</label>
-    <input id="ny-navn" placeholder="F.eks. Slangebytte kran 3">
-    <div id="felt-felt">
-      <label>Fartøy / lokasjon</label>
-      <input id="ny-lok" placeholder="Normand Cutter, Karmøy base...">
-    </div>
-    <label>Dato</label>
-    <input type="date" id="ny-dato">
-    <div class="btn-row">
-      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-jobb')">Avbryt</button>
-      <button class="btn btn-primary" style="flex:2" onclick="lagreJobb()"><i class="ti ti-check"></i> Opprett</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL NY BESTILLING -->
-<div class="modal-bg" id="modal-best">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Legg til bestilling</div>
-    <label>Vare / beskrivelse</label>
-    <input id="b-navn" placeholder="Parker R2T-10, 5256-06...">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><label>Antall</label><input type="number" id="b-antall" value="1" min="1"></div>
-      <div><label>Enhet</label>
-        <select id="b-enhet"><option>stk</option><option>m</option><option>rull</option><option>eske</option><option>sett</option><option>liter</option></select>
-      </div>
-    </div>
-    <label>Leverandør</label>
-    <input id="b-lev" placeholder="Parker, Stauff, Alfagomma...">
-    <label>Merknad</label>
-    <input id="b-merk" placeholder="Hastegrad, koblet til jobb...">
-    <div class="btn-row">
-      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-best')">Avbryt</button>
-      <button class="btn btn-primary" style="flex:2" onclick="lagreBestilling()"><i class="ti ti-check"></i> Legg til</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL REDIGER JOBB -->
-<div class="modal-bg" id="modal-rediger">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Rediger jobb</div>
-    <input type="hidden" id="rediger-id">
-    <label>Type</label>
-    <div id="rediger-type-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
-    <input type="hidden" id="rediger-type-val" value="felt">
-    <label>Kunde</label>
-    <input id="rediger-kunde">
-    <div class="ref-row">
-      <div><label>Deres ref.</label><input id="rediger-ordrenr"></div>
-      <div><label>Referanse</label><input id="rediger-kref"></div>
-    </div>
-    <label>Beskrivelse / oppdrag</label>
-    <input id="rediger-navn">
-    <div id="rediger-felt-felt">
-      <label>Fartøy / lokasjon</label>
-      <input id="rediger-lok">
-    </div>
-    <label>Dato</label>
-    <input type="date" id="rediger-dato">
-    <div class="btn-row">
-      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-rediger')">Avbryt</button>
-      <button class="btn btn-primary" style="flex:2" onclick="lagreRedigertJobb()"><i class="ti ti-check"></i> Lagre</button>
-    </div>
-  </div>
-</div>
-
-<div class="snack" id="snack"></div>
+<div id="app"></div>
+<div id="toast" class="toast" hidden></div>
 
 <script>
-const FBTN_D = 'padding:5px 14px;border-radius:4px;font-size:13px;cursor:pointer;border:1px solid #9ca3af;color:#374151;background:#ffffff;font-weight:500;font-family:system-ui,sans-serif;white-space:nowrap;-webkit-appearance:none';
-const FBTN_S = 'padding:5px 14px;border-radius:4px;font-size:13px;cursor:pointer;border:1px solid #2d7d3a;color:#2d7d3a;background:#dcfce7;font-weight:600;font-family:system-ui,sans-serif;white-space:nowrap;-webkit-appearance:none';
-const CHIP_D = 'padding:7px 13px;border-radius:20px;font-size:13px;cursor:pointer;border:1px solid #9ca3af;color:#374151;background:#ffffff;display:inline-flex;align-items:center;gap:5px;font-family:system-ui,sans-serif;font-weight:500;-webkit-appearance:none';
-const CHIP_S = 'padding:7px 13px;border-radius:20px;font-size:13px;cursor:pointer;border:1px solid #2d7d3a;color:#2d7d3a;background:#dcfce7;display:inline-flex;align-items:center;gap:5px;font-family:system-ui,sans-serif;font-weight:600;-webkit-appearance:none';
+(function () {
+  "use strict";
 
-let KATALOG = [];
-fetch('varekatalog.json').then(r=>r.json()).then(d=>{ KATALOG = d; }).catch(()=>{});
+  // ---------- helpers ----------
+  const $ = (s, el) => (el || document).querySelector(s);
+  const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+  const fmtDate = (iso) => { if (!iso) return ""; const p = String(iso).split("-"); return p.length === 3 ? p[2] + "." + p[1] + "." + p[0] : iso; };
+  const nf = (n, d) => (Math.round((Number(n) || 0) * Math.pow(10, d)) / Math.pow(10, d)).toLocaleString("nb-NO", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const num = (v) => { const n = parseFloat(String(v == null ? "" : v).replace(",", ".")); return isFinite(n) ? n : 0; };
+  const uid8 = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  let toastT;
+  function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 2600); }
 
-function visVareforslag(q) {
-  const el = document.getElementById('vare-forslag');
-  q = q.trim();
-  if (q.length < 2) { el.style.display='none'; return; }
-  const ql = q.toLowerCase();
-  const treff = KATALOG.filter(v => v.nr.toLowerCase().includes(ql) || v.navn.toLowerCase().includes(ql)).slice(0, 30);
-  if (!treff.length) { el.style.display='none'; return; }
-  el.innerHTML = treff.map(v =>
-    `<div onclick="velgVare('${v.nr.replace(/'/g,"\\'")}','${v.navn.replace(/'/g,"\\'")}' )" style="padding:10px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:14px" onmousedown="event.preventDefault()">
-      <span style="font-weight:600;color:#111">${v.nr}</span>
-      <span style="color:#6b7280;margin-left:8px;font-size:12px">${v.navn}</span>
-    </div>`
-  ).join('');
-  el.style.display='block';
-}
-
-function velgVare(nr, navn) {
-  document.getElementById('v-navn').value = nr;
-  document.getElementById('vare-forslag').style.display = 'none';
-}
-
-document.addEventListener('click', e => {
-  if (!e.target.closest('#v-navn') && !e.target.closest('#vare-forslag'))
-    document.getElementById('vare-forslag').style.display = 'none';
-});
-
-let S = JSON.parse(localStorage.getItem('tess_v4') || '{"jobber":[],"aktivt":null,"bestillinger":[]}');
-if (!S.bestillinger) S.bestillinger = [];
-let jobbFilter = 'alle', bestFilter = 'alle';
-
-const save = () => localStorage.setItem('tess_v4', JSON.stringify(S));
-const snack = (m, bg) => {
-  const e = document.getElementById('snack');
-  e.textContent = m; e.style.background = bg || '#2d7d3a';
-  e.classList.add('show'); setTimeout(() => e.classList.remove('show'), 2300);
-};
-const getAkt = () => S.jobber.find(j => j.id === S.aktivt) || null;
-const typeLabel = {felt:'Felt', butikk:'Butikk', verksted:'Verksted'};
-const typeIcon  = {felt:'ti-tool', butikk:'ti-building-store', verksted:'ti-settings'};
-const typeBadge = {felt:'b-green', butikk:'b-pur', verksted:'b-amber'};
-
-function byggJobbFilter() {
-  const el = document.getElementById('jobb-filter');
-  el.innerHTML = '';
-  [{f:'alle',l:'Alle'},{f:'felt',l:'Felt'},{f:'butikk',l:'Butikk'},{f:'verksted',l:'Verksted'}].forEach(o => {
-    const b = document.createElement('button');
-    b.textContent = o.l;
-    b.setAttribute('style', o.f === jobbFilter ? FBTN_S : FBTN_D);
-    b.onclick = () => { jobbFilter = o.f; byggJobbFilter(); renderJobber(); };
-    el.appendChild(b);
-  });
-}
-
-function byggBestFilter() {
-  const el = document.getElementById('best-filter');
-  el.innerHTML = '';
-  [{f:'alle',l:'Alle'},{f:'venter',l:'Venter'},{f:'bestilt',l:'Bestilt'},{f:'mottatt',l:'Mottatt'}].forEach(o => {
-    const b = document.createElement('button');
-    b.textContent = o.l;
-    b.setAttribute('style', o.f === bestFilter ? FBTN_S : FBTN_D);
-    b.onclick = () => { bestFilter = o.f; byggBestFilter(); renderBestilling(); };
-    el.appendChild(b);
-  });
-}
-
-function byggTypeChips() {
-  const el = document.getElementById('jobb-type-chips');
-  const cur = document.getElementById('jobb-type-val').value;
-  el.innerHTML = '';
-  [{t:'felt',l:'Felt',i:'ti-tool'},{t:'butikk',l:'Butikk',i:'ti-building-store'},{t:'verksted',l:'Verksted',i:'ti-settings'}].forEach(o => {
-    const b = document.createElement('button');
-    b.innerHTML = '<i class="ti ' + o.i + '"></i> ' + o.l;
-    b.setAttribute('style', o.t === cur ? CHIP_S : CHIP_D);
-    b.onclick = () => {
-      document.getElementById('jobb-type-val').value = o.t;
-      document.getElementById('felt-felt').style.display = o.t === 'felt' ? 'block' : 'none';
-      byggTypeChips();
-    };
-    el.appendChild(b);
-  });
-}
-
-function klassifiser(navn) {
-  const n = navn.trim().toUpperCase();
-  const bm = n.match(/^([A-Z]{2})\d/);
-  if (bm) return {gruppe: bm[1], label: bm[1]};
-  if (/^\d{4}-\d{2,3}-\d{2}$/.test(n)) return {gruppe:'innsats', label:'Innsats'};
-  if (/^65\d{3}-/.test(n)) return {gruppe:'hylse', label:'Hylse'};
-  if (/^7\d{3}-/.test(n)) return {gruppe:'ansats', label:'Ansats'};
-  if (/^\d{4}-\d{2}$/.test(n)) return {gruppe:'slange', label:'Slange'};
-  return {gruppe:'annet', label:'Annet'};
-}
-const gOrder = ['slange','hylse','innsats','ansats'];
-function gSort(a, b) {
-  const ai = gOrder.indexOf(a.gruppe), bi = gOrder.indexOf(b.gruppe);
-  const av = ai < 0 ? 99 : ai, bv = bi < 0 ? 99 : bi;
-  return av !== bv ? av - bv : a.navn.localeCompare(b.navn);
-}
-
-function parseTime(s) { const [h,m] = s.split(':').map(Number); return h*60+m; }
-function fmtMin(m) { const h = Math.floor(m/60), r = m%60; if(h&&r) return h+'t '+r+'min'; return h ? h+'t' : r+'min'; }
-function timekode(fra, dato) {
-  if (dato) { const d = new Date(dato).getDay(); if (d===0||d===6) return 'TTM-2107'; }
-  const h = parseInt(fra.split(':')[0]);
-  if (h >= 21 || h < 7) return 'TTM-2107';
-  if (h >= 15) return 'TTM-1621';
-  return 'TTM-0716';
-}
-function minToStr(m) {
-  m = ((m % 1440) + 1440) % 1440;
-  return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
-}
-function splittTimer(fra, til, dato) {
-  const isHelg = dato && [0,6].includes(new Date(dato).getDay());
-  let fraMin = parseTime(fra), tilMin = parseTime(til);
-  if (tilMin <= fraMin) tilMin += 1440;
-  if (isHelg) return [{fra, til: minToStr(tilMin), min: tilMin-fraMin, kode:'TTM-2107'}];
-  const grenser = [0, 7*60, 15*60, 21*60, 1440];
-  const koder   = ['TTM-2107','TTM-0716','TTM-1621','TTM-2107'];
-  const deler = [];
-  for (let i = 0; i < koder.length; i++) {
-    const s = Math.max(fraMin, grenser[i]), e = Math.min(tilMin, grenser[i+1]);
-    if (e > s) deler.push({fra: minToStr(s), til: minToStr(e), min: e-s, kode: koder[i]});
-  }
-  return deler;
-}
-
-['t-fra','t-til'].forEach(id => document.getElementById(id).addEventListener('input', () => {
-  const f = document.getElementById('t-fra').value, t = document.getElementById('t-til').value;
-  if (f && t) { let d = parseTime(t)-parseTime(f); if(d<0) d+=1440; document.getElementById('t-preview').textContent = d ? '= '+fmtMin(d) : ''; }
-  else document.getElementById('t-preview').textContent = '';
-}));
-document.getElementById('t-dato').value = new Date().toISOString().slice(0,10);
-
-document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
-  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
-  t.classList.add('active');
-  document.getElementById('page-'+t.dataset.tab).classList.add('active');
-  render();
-}));
-
-const openModal  = id => document.getElementById(id).classList.add('open');
-const closeModal = id => document.getElementById(id).classList.remove('open');
-document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
-
-function openNyJobb() {
-  document.getElementById('ny-dato').value = new Date().toISOString().slice(0,10);
-  document.getElementById('jobb-type-val').value = 'felt';
-  document.getElementById('felt-felt').style.display = 'block';
-  byggTypeChips();
-  openModal('modal-jobb');
-}
-function lagreJobb() {
-  const type   = document.getElementById('jobb-type-val').value;
-  const kunde  = document.getElementById('ny-kunde').value.trim();
-  const ordrenr= document.getElementById('ny-ordrenr').value.trim();
-  const kref   = document.getElementById('ny-kref').value.trim();
-  const navn   = document.getElementById('ny-navn').value.trim();
-  const lok    = document.getElementById('ny-lok').value.trim();
-  const dato   = document.getElementById('ny-dato').value;
-  if (!kunde||!navn) { snack('Fyll inn kunde og beskrivelse','#dc2626'); return; }
-  S.jobber.unshift({id:Date.now(), type, kunde, ordrenr, kref, navn, lokasjon:lok, dato, timer:[], varer:[]});
-  S.aktivt = S.jobber[0].id;
-  save(); closeModal('modal-jobb');
-  ['ny-kunde','ny-ordrenr','ny-kref','ny-navn','ny-lok'].forEach(id => document.getElementById(id).value = '');
-  snack('Jobb opprettet ✓'); render();
-}
-function byggRedigerTypeChips() {
-  const el = document.getElementById('rediger-type-chips');
-  const cur = document.getElementById('rediger-type-val').value;
-  el.innerHTML = '';
-  [{t:'felt',l:'Felt',i:'ti-tool'},{t:'butikk',l:'Butikk',i:'ti-building-store'},{t:'verksted',l:'Verksted',i:'ti-settings'}].forEach(o => {
-    const b = document.createElement('button');
-    b.innerHTML = '<i class="ti '+o.i+'"></i> '+o.l;
-    b.setAttribute('style', o.t===cur ? CHIP_S : CHIP_D);
-    b.onclick = () => {
-      document.getElementById('rediger-type-val').value = o.t;
-      document.getElementById('rediger-felt-felt').style.display = o.t==='felt' ? 'block' : 'none';
-      byggRedigerTypeChips();
-    };
-    el.appendChild(b);
-  });
-}
-function openRedigerJobb(id) {
-  const j = S.jobber.find(x => x.id===id); if (!j) return;
-  document.getElementById('rediger-id').value = id;
-  document.getElementById('rediger-type-val').value = j.type||'felt';
-  document.getElementById('rediger-kunde').value = j.kunde||'';
-  document.getElementById('rediger-ordrenr').value = j.ordrenr||'';
-  document.getElementById('rediger-kref').value = j.kref||'';
-  document.getElementById('rediger-navn').value = j.navn||'';
-  document.getElementById('rediger-lok').value = j.lokasjon||'';
-  document.getElementById('rediger-dato').value = j.dato||'';
-  document.getElementById('rediger-felt-felt').style.display = (j.type||'felt')==='felt' ? 'block' : 'none';
-  byggRedigerTypeChips();
-  openModal('modal-rediger');
-}
-function lagreRedigertJobb() {
-  const id = parseInt(document.getElementById('rediger-id').value);
-  const j = S.jobber.find(x => x.id===id); if (!j) return;
-  const kunde = document.getElementById('rediger-kunde').value.trim();
-  const navn  = document.getElementById('rediger-navn').value.trim();
-  if (!kunde||!navn) { snack('Fyll inn kunde og beskrivelse','#dc2626'); return; }
-  j.type     = document.getElementById('rediger-type-val').value;
-  j.kunde    = kunde;
-  j.ordrenr  = document.getElementById('rediger-ordrenr').value.trim();
-  j.kref     = document.getElementById('rediger-kref').value.trim();
-  j.navn     = navn;
-  j.lokasjon = document.getElementById('rediger-lok').value.trim();
-  j.dato     = document.getElementById('rediger-dato').value;
-  save(); closeModal('modal-rediger'); snack('Jobb oppdatert ✓'); render();
-}
-
-function settAktivt(id) { S.aktivt = id; save(); snack('Jobb aktivert'); render(); }
-function slettJobb(id) {
-  if (!confirm('Slette jobben og all data?')) return;
-  S.jobber = S.jobber.filter(j => j.id !== id);
-  if (S.aktivt === id) S.aktivt = null;
-  save(); render();
-}
-
-function leggTilTid() {
-  if (!S.aktivt) { snack('Velg en aktiv jobb først','#d97706'); return; }
-  const fra = document.getElementById('t-fra').value, til = document.getElementById('t-til').value;
-  if (!fra||!til) { snack('Fyll inn fra og til','#dc2626'); return; }
-  let min = parseTime(til)-parseTime(fra); if(min<0) min+=1440;
-  if (!min) { snack('Fra og til er like','#dc2626'); return; }
-  const dato = document.getElementById('t-dato').value, komm = document.getElementById('t-komm').value.trim();
-  const deler = splittTimer(fra, til, dato);
-  const j = getAkt();
-  deler.forEach(d => j.timer.push({id:Date.now()+Math.random(), fra:d.fra, til:d.til, min:d.min, dato, komm, kode:d.kode}));
-  save();
-  ['t-fra','t-til','t-komm'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('t-preview').textContent = '';
-  snack(deler.length > 1 ? 'Splittet i '+deler.length+' poster ✓' : 'Tid registrert ✓'); render();
-}
-function slettTid(jid, tid) {
-  const j = S.jobber.find(x => x.id===jid);
-  if (j) j.timer = j.timer.filter(t => t.id!==tid);
-  save(); render();
-}
-
-function leggTilVare() {
-  if (!S.aktivt) { snack('Velg en aktiv jobb først','#d97706'); return; }
-  const navn = document.getElementById('v-navn').value.trim();
-  if (!navn) { snack('Skriv inn varebeskrivelse','#dc2626'); return; }
-  const k = klassifiser(navn);
-  getAkt().varer.push({id:Date.now(), navn, antall:parseFloat(document.getElementById('v-antall').value)||1, enhet:document.getElementById('v-enhet').value, komm:document.getElementById('v-komm').value.trim(), gruppe:k.gruppe, label:k.label});
-  save();
-  document.getElementById('v-navn').value = '';
-  document.getElementById('v-antall').value = '1';
-  document.getElementById('v-komm').value = '';
-  snack('Vare lagt til ✓'); render();
-}
-function slettVare(jid, vid) {
-  const j = S.jobber.find(x => x.id===jid);
-  if (j) j.varer = j.varer.filter(v => v.id!==vid);
-  save(); render();
-}
-
-function lagreBestilling() {
-  const navn = document.getElementById('b-navn').value.trim();
-  if (!navn) { snack('Skriv inn varenavn','#dc2626'); return; }
-  S.bestillinger.push({id:Date.now(), navn, antall:parseFloat(document.getElementById('b-antall').value)||1, enhet:document.getElementById('b-enhet').value, lev:document.getElementById('b-lev').value.trim(), merk:document.getElementById('b-merk').value.trim(), status:'venter'});
-  save();
-  ['b-navn','b-lev','b-merk'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('b-antall').value = '1';
-  closeModal('modal-best'); snack('Lagt til ✓'); render();
-}
-function sykleBestStatus(id) {
-  const b = S.bestillinger.find(x => x.id===id); if (!b) return;
-  b.status = {venter:'bestilt', bestilt:'mottatt', mottatt:'venter'}[b.status];
-  save(); render();
-}
-function slettBest(id) { S.bestillinger = S.bestillinger.filter(x => x.id!==id); save(); render(); }
-function slettMottatte() {
-  const n = S.bestillinger.filter(x => x.status==='mottatt').length;
-  if (!n) { snack('Ingen mottatte'); return; }
-  S.bestillinger = S.bestillinger.filter(x => x.status!=='mottatt');
-  save(); snack(n+' fjernet ✓'); render();
-}
-async function kopier(txt) {
-  try { await navigator.clipboard.writeText(txt); snack('Kopiert ✓'); }
-  catch { snack('Markér og kopier manuelt'); }
-}
-
-function render() { renderNav(); renderJobber(); renderTimer(); renderVarer(); renderBestilling(); renderRapport(); }
-
-function renderNav() {
-  const j = getAkt();
-  document.getElementById('nav-sub').textContent = j ? j.kunde+' — '+j.navn : 'Ingen aktiv jobb';
-}
-
-function renderJobber() {
-  byggJobbFilter();
-  const el = document.getElementById('jobb-list');
-  const liste = jobbFilter==='alle' ? S.jobber : S.jobber.filter(j => j.type===jobbFilter);
-  if (!liste.length) { el.innerHTML='<div class="empty"><i class="ti ti-clipboard-list"></i>Ingen jobber her</div>'; return; }
-  el.innerHTML = liste.map(j => {
-    const tot = j.timer.reduce((s,t) => s+t.min, 0);
-    const aktiv = j.id===S.aktivt;
-    const refs = [j.ordrenr?'Deres ref: '+j.ordrenr:'', j.kref?'Ref: '+j.kref:''].filter(Boolean).join(' · ');
-    return '<div class="opp-item'+(aktiv?' opp-aktiv':'')+'">'+
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'+
-        '<div style="flex:1;min-width:0">'+
-          '<div class="opp-name">'+j.kunde+'</div>'+
-          '<div class="opp-meta">'+j.navn+(j.lokasjon?' · '+j.lokasjon:'')+(j.dato?' · '+j.dato:'')+'</div>'+
-          (refs?'<div class="opp-ref">'+refs+'</div>':'')+
-        '</div>'+(aktiv?'<span class="badge b-green">Aktiv</span>':'')+
-      '</div>'+
-      '<div class="opp-badges">'+
-        '<span class="badge '+typeBadge[j.type]+'"><i class="ti '+typeIcon[j.type]+'"></i> '+typeLabel[j.type]+'</span>'+
-        (tot>0?'<span class="badge b-blue"><i class="ti ti-clock"></i> '+fmtMin(tot)+'</span>':'')+
-        (j.varer.length?'<span class="badge b-amber"><i class="ti ti-package"></i> '+j.varer.length+' vare'+(j.varer.length>1?'r':'')+'</span>':'')+
-      '</div>'+
-      '<div class="opp-actions">'+
-        (!aktiv?'<button class="btn btn-ghost btn-sm" onclick="settAktivt('+j.id+')"><i class="ti ti-bolt"></i> Aktiver</button>':'')+
-        '<button class="btn btn-ghost btn-sm" onclick="gaaRapport('+j.id+')"><i class="ti ti-file-description"></i> Rapport</button>'+
-        '<button class="btn btn-ghost btn-sm btn-icon" onclick="openRedigerJobb('+j.id+')" aria-label="Rediger"><i class="ti ti-pencil"></i></button>'+
-        '<button class="btn btn-red btn-sm btn-icon" style="margin-left:auto" onclick="slettJobb('+j.id+')" aria-label="Slett"><i class="ti ti-trash"></i></button>'+
-      '</div>'+
-    '</div>';
-  }).join('');
-}
-
-function renderTimer() {
-  const j = getAkt();
-  document.getElementById('timer-badge').textContent = j ? j.kunde+' — '+j.navn : 'Ingen jobb';
-  const el = document.getElementById('timer-log');
-  if (!j||!j.timer.length) { el.innerHTML='<div class="empty"><i class="ti ti-clock-off"></i>Ingen timer registrert</div>'; return; }
-  const tot = j.timer.reduce((s,t) => s+t.min, 0);
-  el.innerHTML = '<div class="card">'+
-    '<div style="font-size:12px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Logg</div>'+
-    j.timer.slice().reverse().map(t =>
-      '<div class="time-entry-row">'+
-        '<div class="time-entry-info">'+
-          '<div class="time-range">'+t.fra+' – '+t.til+'</div>'+
-          '<div class="time-dur">'+fmtMin(t.min)+(t.dato?' · '+t.dato:'')+(t.kode?' · <span style="font-family:monospace;font-weight:700">'+t.kode+'</span>':'')+'</div>'+
-          (t.komm?'<div class="time-komm">'+t.komm+'</div>':'')+
-        '</div>'+
-        '<button class="btn btn-red btn-sm btn-icon" onclick="slettTid('+j.id+','+t.id+')" aria-label="Slett"><i class="ti ti-trash"></i></button>'+
-      '</div>'
-    ).join('')+
-    '<div style="border-top:1px solid #dde0d8;margin-top:8px;padding-top:10px;display:flex;justify-content:space-between">'+
-      '<span style="font-size:13px;color:#6b7280;font-weight:600">TOTALT</span>'+
-      '<span style="font-size:18px;font-weight:700;color:#2d7d3a">'+fmtMin(tot)+'</span>'+
-    '</div>'+
-  '</div>';
-}
-
-function renderVarer() {
-  const j = getAkt();
-  document.getElementById('varer-badge').textContent = j ? j.kunde+' — '+j.navn : 'Ingen jobb';
-  const el = document.getElementById('vare-list');
-  if (!j||!j.varer.length) { el.innerHTML='<div class="empty"><i class="ti ti-package-off"></i>Ingen varer registrert</div>'; return; }
-  const sortert = [...j.varer].map(v => { const k=klassifiser(v.navn); return Object.assign({},v,k); }).sort(gSort);
-  const gr = {};
-  sortert.forEach(v => { if(!gr[v.gruppe]) gr[v.gruppe]=[]; gr[v.gruppe].push(v); });
-  let html = '';
-  for (const varer of Object.values(gr)) {
-    html += '<div class="gruppe-header"><span class="gruppe-label">'+varer[0].label+'</span><div class="gruppe-line"></div></div>';
-    html += varer.map(v =>
-      '<div class="vare-row">'+
-        '<div class="vare-info"><div class="vare-name">'+v.navn+'</div><div class="vare-det">'+v.antall+' '+v.enhet+(v.komm?' · '+v.komm:'')+'</div></div>'+
-        '<button class="btn btn-red btn-sm btn-icon" onclick="slettVare('+j.id+','+v.id+')" aria-label="Slett"><i class="ti ti-trash"></i></button>'+
-      '</div>'
-    ).join('');
-  }
-  el.innerHTML = html;
-}
-
-function renderBestilling() {
-  byggBestFilter();
-  const el = document.getElementById('best-list');
-  const liste = bestFilter==='alle' ? S.bestillinger : S.bestillinger.filter(b => b.status===bestFilter);
-  if (!liste.length) { el.innerHTML='<div class="empty"><i class="ti ti-shopping-cart-off"></i>Ingen bestillinger her</div>'; return; }
-  const ikon = {venter:'ti-clock', bestilt:'ti-truck', mottatt:'ti-check'};
-  const bc   = {venter:'b-amber', bestilt:'b-blue', mottatt:'b-green'};
-  const bl   = {venter:'Venter', bestilt:'Bestilt', mottatt:'Mottatt'};
-  el.innerHTML = liste.map(b =>
-    '<div class="best-row'+(b.status==='mottatt'?' done':'')+'">'+
-      '<div class="best-info"><div class="best-name">'+b.navn+'</div><div class="best-det">'+b.antall+' '+b.enhet+(b.lev?' · '+b.lev:'')+(b.merk?' · '+b.merk:'')+'</div></div>'+
-      '<button class="badge '+bc[b.status]+'" style="cursor:pointer;white-space:nowrap;flex-shrink:0;border:1px solid" onclick="sykleBestStatus('+b.id+')"><i class="ti '+ikon[b.status]+'"></i> '+bl[b.status]+'</button>'+
-      '<button class="btn btn-red btn-sm btn-icon" onclick="slettBest('+b.id+')" aria-label="Slett"><i class="ti ti-trash"></i></button>'+
-    '</div>'
-  ).join('');
-}
-
-function beregnOvertid(timer) {
-  const per = {};
-  timer.forEach(t => {
-    const dato = t.dato || '—';
-    if (!per[dato]) per[dato] = {ot50: 0, ot100: 0};
-    const isHelg = t.dato && [0,6].includes(new Date(t.dato).getDay());
-    let fra = parseTime(t.fra), til = parseTime(t.til);
-    if (til <= fra) til += 1440;
-    if (isHelg) { per[dato].ot100 += til - fra; return; }
-    const soner = [{s:0,e:420,t:'ot100'},{s:420,e:900,t:null},{s:900,e:1080,t:'ot50'},{s:1080,e:1260,t:'ot100'},{s:1260,e:1440,t:'ot100'}];
-    soner.forEach(z => {
-      const a = Math.max(fra, z.s), b = Math.min(til, z.e);
-      if (b > a && z.t) per[dato][z.t] += b - a;
-    });
-  });
-  return per;
-}
-
-function renderRapport() {
-  const el = document.getElementById('rapport-content');
-  if (!S.jobber.length) { el.innerHTML='<div class="empty"><i class="ti ti-file-off"></i>Ingen jobber å vise</div>'; return; }
-  el.innerHTML = S.jobber.map(j => {
-    const tot = j.timer.reduce((s,t) => s+t.min, 0);
-    const tl  = j.timer.map(t => '  '+t.fra+'–'+t.til+' ('+fmtMin(t.min)+')  '+(t.kode||timekode(t.fra,t.dato))+(t.komm?' — '+t.komm:'')).join('\n');
-    const sortert = [...j.varer].map(v => { const k=klassifiser(v.navn); return Object.assign({},v,k); }).sort(gSort);
-    const gr = {}; sortert.forEach(v => { if(!gr[v.gruppe]) gr[v.gruppe]=[]; gr[v.gruppe].push(v); });
-    let vl = '';
-    for (const varer of Object.values(gr)) {
-      vl += '\n  ['+varer[0].label.toUpperCase()+']\n';
-      vl += varer.map(v => '  '+v.antall+' '+v.enhet+'  '+v.navn+(v.komm?' ('+v.komm+')':'')).join('\n');
+  // ---------- module definitions ----------
+  const HOURTYPES = ["Normal", "Overtid 50%", "Overtid 100%", "Reisetid"];
+  const UNITS = ["stk", "m", "l", "kg", "sett", "pk"];
+  const MODS = {
+    hoses: {
+      title: "Slanger", add: "Legg til slange",
+      fields: [
+        { k: "pos", l: "Pos.", w: 1, ph: "1" },
+        { k: "sted", l: "Sted / system", w: 3, ph: "F.eks. kran, hovedsylinder", list: true },
+        { k: "type", l: "Slangetype", w: 2, ph: '1/2" 2SN', list: true, req: true, cls: "wide-m" },
+        { k: "len", l: "Lengde (mm)", w: 1, num: true, req: true },
+        { k: "qty", l: "Antall", w: 1, num: true, def: "1" },
+        { k: "e1", l: "Ende 1 (innsats)", w: 2, ph: "DKOL M22", list: true, lsrc: ["e1", "e2"] },
+        { k: "e2", l: "Ende 2 (innsats)", w: 2, ph: "DKOL 90° M22", list: true, lsrc: ["e1", "e2"] },
+        { k: "hylse", l: "Hylse", w: 2, list: true },
+        { k: "bar", l: "Trykk (bar)", w: 2, num: true },
+        { k: "note", l: "Merknad", w: 4 }
+      ],
+      keep: ["sted", "type", "hylse", "bar"]
+    },
+    items: {
+      title: "Varer", add: "Legg til vare",
+      fields: [
+        { k: "nr", l: "Varenr.", w: 1, list: true },
+        { k: "desc", l: "Beskrivelse", w: 3, req: true, list: true },
+        { k: "qty", l: "Antall", w: 2, num: true, def: "1", req: true },
+        { k: "unit", l: "Enhet", w: 2, opts: UNITS }
+      ],
+      keep: ["unit"]
+    },
+    hours: {
+      title: "Timer", add: "Registrer timer",
+      fields: [
+        { k: "date", l: "Dato", w: 2, type: "date", def: today },
+        { k: "tech", l: "Tekniker", w: 2, list: true, def: () => S.settings.tech || "" },
+        { k: "from", l: "Fra", w: 1, type: "time" },
+        { k: "to", l: "Til", w: 1, type: "time" },
+        { k: "h", l: "Timer", w: 2, num: true, req: true },
+        { k: "kind", l: "Type", w: 2, opts: HOURTYPES, cls: "wide-m" },
+        { k: "desc", l: "Arbeid utført", w: 2, cls: "wide-m" }
+      ],
+      keep: ["date", "tech", "kind"]
     }
-    if (!vl) vl = '\n  Ingen varer';
-    const refs = [j.ordrenr?'Deres ref: '+j.ordrenr:'', j.kref?'Referanse: '+j.kref:''].filter(Boolean).join(' · ');
-    const ot = beregnOvertid(j.timer);
-    const otTekst = Object.entries(ot).filter(([,v]) => v.ot50||v.ot100).map(([dato, v]) =>
-      '  '+dato+(v.ot50 ? '\n    50% overtid: '+fmtMin(v.ot50) : '')+(v.ot100 ? '\n    100% overtid: '+fmtMin(v.ot100) : '')
-    ).join('\n');
-    const txt = '['+typeLabel[j.type].toUpperCase()+'] '+j.navn+
-      '\nKunde: '+j.kunde+(j.lokasjon?'\nLokasjon: '+j.lokasjon:'')+(refs?'\n'+refs:'')+
-      '\nDato: '+(j.dato||'—')+
-      '\n\nTIMER TOTALT: '+(tot>0?fmtMin(tot):'0')+'\n'+(tl||'  Ingen timer')+
-      (otTekst ? '\n\nOVERTID:\n'+otTekst : '')+
-      '\n\nMATERIELL:'+vl;
-    return '<div class="card">'+
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'+
-        '<div>'+
-          '<div style="font-size:15px;font-weight:700;color:#111">'+j.navn+'</div>'+
-          '<div style="font-size:12px;color:#6b7280;margin-top:2px">'+j.kunde+(j.dato?' · '+j.dato:'')+'</div>'+
-          (refs?'<div style="font-size:12px;color:#2563eb;font-family:monospace;margin-top:2px">'+refs+'</div>':'')+
-        '</div>'+
-        '<span class="badge '+typeBadge[j.type]+'">'+typeLabel[j.type]+'</span>'+
-      '</div>'+
-      '<div style="display:flex;gap:20px;margin-bottom:12px">'+
-        '<div><div style="font-size:10px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Timer</div><div style="font-size:20px;font-weight:700;color:#2d7d3a">'+(tot>0?fmtMin(tot):'—')+'</div></div>'+
-        '<div><div style="font-size:10px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Varer</div><div style="font-size:20px;font-weight:700;color:#d97706">'+(j.varer.length||'—')+'</div></div>'+
-      '</div>'+
-      (Object.values(ot).some(v=>v.ot50||v.ot100) ?
-        '<div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px">'+
-          '<div style="font-weight:700;color:#92400e;margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.06em">Overtid å legge til</div>'+
-          Object.entries(ot).filter(([,v])=>v.ot50||v.ot100).map(([dato,v])=>
-            '<div style="margin-bottom:4px;color:#78350f"><strong>'+dato+'</strong>'+
-            (v.ot50?'<span style="margin-left:10px;background:#fef3c7;border-radius:4px;padding:1px 6px">50%: '+fmtMin(v.ot50)+'</span>':'')+
-            (v.ot100?'<span style="margin-left:6px;background:#fee2e2;border-radius:4px;padding:1px 6px">100%: '+fmtMin(v.ot100)+'</span>':'')+
-            '</div>'
-          ).join('')+
-        '</div>' : '')+
-      '<div class="copybox">'+txt+'</div>'+
-      '<button class="btn btn-ghost btn-sm btn-full" onclick="kopier('+JSON.stringify(txt)+')"><i class="ti ti-copy"></i> Kopier tekst</button>'+
-    '</div>';
-  }).join('');
-}
+  };
+  const BRAND = { name: "TESS", tag: "TEKNISK FAGHANDEL" };
+  const STANDALONE = !window.claude;
+  const ico = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+  const ICONS = {
+    info: ico('<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 10h.01M12 10h4M9 14h.01M12 14h4"/>'),
+    hoses: ico('<path d="M4 20c0-6 4-8 8-8s8-2 8-8"/><rect x="2.5" y="18" width="3" height="4" rx=".5"/><rect x="18.5" y="2" width="3" height="4" rx=".5"/>'),
+    items: ico('<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>'),
+    hours: ico('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+    notes: ico('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>'),
+    send: ico('<path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>')
+  };
+  const TABS = [["info", "Jobb"], ["hoses", "Slanger"], ["items", "Varer"], ["hours", "Timer"], ["notes", "Notater"], ["send", "Send"]];
+  const STATUS = { aktiv: "Pågår", ferdig: "Ferdig", sendt: "Sendt" };
 
-function gaaRapport(id) {
-  S.aktivt = id; save();
-  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
-  document.querySelector('[data-tab="rapport"]').classList.add('active');
-  document.getElementById('page-rapport').classList.add('active');
-  render();
-}
+  // ---------- state ----------
+  const S = { jobs: {}, settings: { type: "settings", email: "", tech: "" }, view: "list", jobId: null, tab: "info", filter: "aktive", q: "", edit: null, mode: "loading", saveState: "", armed: null };
+  let col = null, downloads = null;
+  const dirty = new Set(), timers = {}, inflight = {}, again = {};
 
-render();
+  // ---------- storage ----------
+  function saveLocal() {
+    lsSet("jobbkort.jobs", JSON.stringify(S.jobs));
+    lsSet("jobbkort.settings", JSON.stringify(S.settings));
+  }
+  function loadLocal() {
+    try { const j = JSON.parse(lsGet("jobbkort.jobs") || "{}"); if (j && typeof j === "object") S.jobs = j; } catch (e) {}
+    try { const s = JSON.parse(lsGet("jobbkort.settings") || "null"); if (s) S.settings = Object.assign(S.settings, s); } catch (e) {}
+  }
+  function ingest(docs, changes) {
+    let touchedOpen = false;
+    for (const d of docs) {
+      if (!d.exists) continue;
+      const v = d.data();
+      if (!v) continue;
+      if (v.type === "settings") { if (!dirty.has("settings")) S.settings = Object.assign({}, S.settings, clone(v)); continue; }
+      if (v.type !== "job") continue;
+      const cur = S.jobs[d.id];
+      if (dirty.has(d.id)) continue;
+      if (!cur || (v.updated || 0) > (cur.updated || 0)) { S.jobs[d.id] = clone(v); if (d.id === S.jobId) touchedOpen = true; }
+    }
+    if (changes) for (const c of changes) {
+      if (c.type === "removed" && !dirty.has(c.doc.id) && S.jobs[c.doc.id]) { delete S.jobs[c.doc.id]; if (c.doc.id === S.jobId) { S.view = "list"; S.jobId = null; } touchedOpen = true; }
+    }
+    return touchedOpen;
+  }
+  function setSave(st) {
+    S.saveState = st;
+    const el = $("#savestate");
+    if (el) { el.textContent = st === "saving" ? "Lagrer …" : st === "err" ? "Ikke lagret" : st === "ok" ? "Lagret" : ""; el.className = "savestate" + (st === "err" ? " err" : ""); }
+  }
+  function touch(id) {
+    const job = S.jobs[id];
+    if (job) job.updated = Date.now();
+    dirty.add(id);
+    clearTimeout(timers[id]);
+    timers[id] = setTimeout(() => flush(id), 500);
+    setSave("saving");
+  }
+  async function flush(id) {
+    if (inflight[id]) { again[id] = true; return; }
+    inflight[id] = true;
+    try {
+      if (col) {
+        const body = id === "settings" ? S.settings : S.jobs[id];
+        if (body) await col.doc(id).set(clone(body)); else await col.doc(id).delete();
+      }
+      saveLocal();
+      setSave("ok");
+    } catch (e) {
+      setSave("err");
+      toast(e && e.code === "quota_exceeded" ? "Lagringsplassen er full. Slett gamle jobber." : "Kunne ikke lagre. Prøver igjen ved neste endring.");
+      saveLocal();
+    } finally {
+      inflight[id] = false;
+      if (again[id]) { again[id] = false; flush(id); } else dirty.delete(id);
+    }
+  }
+
+  async function init() {
+    loadLocal();
+    S.mode = "loading";
+    render();
+    let db = null, user = null;
+    try {
+      if (window.claude && window.claude.use) {
+        [db, user, downloads] = await Promise.all([window.claude.use("db"), window.claude.use("user"), window.claude.use("downloads")]);
+      }
+    } catch (e) {}
+    let id = null;
+    try { if (user) id = await user.id(); } catch (e) {}
+    if (db && id) {
+      try {
+        col = db.collection("data/users/" + id);
+        const snap = await col.get();
+        const localJobs = S.jobs;
+        S.jobs = {};
+        ingest(snap.docs);
+        S.mode = "db";
+        // First run on the account: move jobs kept in this browser up to the account.
+        if (!Object.keys(S.jobs).length) for (const [k, v] of Object.entries(localJobs)) if (v && v.type === "job") { S.jobs[k] = v; touch(k); }
+        col.onSnapshot((s) => {
+          const hit = ingest(s.docs, s.docChanges());
+          if (S.view === "list" || (hit && !isTyping())) render();
+        }, () => {});
+      } catch (e) { col = null; S.mode = "local"; }
+    } else S.mode = "local";
+    saveLocal();
+    render();
+  }
+  function isTyping() { const a = document.activeElement; return a && /INPUT|TEXTAREA|SELECT/.test(a.tagName); }
+
+  // ---------- derived ----------
+  function hoseSums(job) {
+    const byType = {}, ends = {}, ferr = {};
+    let count = 0;
+    for (const h of job.hoses || []) {
+      const q = num(h.qty) || 1;
+      count += q;
+      const t = h.type || "Ukjent type";
+      byType[t] = byType[t] || { n: 0, mm: 0 };
+      byType[t].n += q; byType[t].mm += num(h.len) * q;
+      for (const e of [h.e1, h.e2]) if (e) ends[e] = (ends[e] || 0) + q;
+      if (h.hylse) ferr[h.hylse] = (ferr[h.hylse] || 0) + 2 * q;
+    }
+    return { byType, ends, ferr, count };
+  }
+  function hourSums(job) {
+    const by = {}; let tot = 0;
+    for (const r of job.hours || []) { const k = r.kind || "Normal"; by[k] = (by[k] || 0) + num(r.h); tot += num(r.h); }
+    return { by, tot };
+  }
+  function suggestions(field) {
+    const set = new Set();
+    for (const j of Object.values(S.jobs)) for (const m of ["hoses", "items", "hours"]) for (const r of j[m] || []) for (const f of field.lsrc || [field.k]) if (r[f] && m === field.mod) set.add(r[f]);
+    return [...set].slice(0, 60);
+  }
+
+  function summaryText(job) {
+    const L = [];
+    const line = (s) => L.push(s);
+    const hr = () => line("");
+    line("JOBBRAPPORT – " + (job.kunde || "Uten kunde"));
+    line("=".repeat(40));
+    line("Kunde:          " + (job.kunde || ""));
+    if (job.kontakt) line("Kontaktperson:  " + job.kontakt);
+    if (job.sted) line("Sted / fartøy:  " + job.sted);
+    if (job.ref) line("Kundens ref/PO: " + job.ref);
+    line("Dato:           " + fmtDate(job.dato));
+    if (job.utfort) line("Utført av:      " + job.utfort);
+    line("Status:         " + STATUS[job.status || "aktiv"]);
+    if (job.beskrivelse) { hr(); line("OPPDRAG"); line(job.beskrivelse); }
+
+    const hs = hourSums(job);
+    if ((job.hours || []).length) {
+      hr(); line("TIMER");
+      for (const r of job.hours) line(`${fmtDate(r.date)}  ${r.from && r.to ? r.from + "–" + r.to + "  " : ""}${nf(r.h, 1)} t  ${r.kind || "Normal"}${r.tech ? "  " + r.tech : ""}${r.desc ? "  – " + r.desc : ""}`);
+      for (const [k, v] of Object.entries(hs.by)) line(`  Sum ${k}: ${nf(v, 1)} t`);
+      line(`  Totalt: ${nf(hs.tot, 1)} t`);
+    }
+    const s = hoseSums(job);
+    if ((job.hoses || []).length) {
+      hr(); line(`SLANGER (${s.count} stk)`);
+      for (const h of job.hoses) {
+        const parts = [`Pos ${h.pos || "-"}`];
+        if (h.sted) parts.push(h.sted);
+        parts.push(`${h.type || "?"}  ${nf(h.len, 0)} mm x${num(h.qty) || 1}`);
+        if (h.e1 || h.e2) parts.push(`${h.e1 || "-"} / ${h.e2 || "-"}`);
+        if (h.hylse) parts.push("Hylse " + h.hylse);
+        if (h.bar) parts.push(h.bar + " bar");
+        if (h.note) parts.push(h.note);
+        line(parts.join(" | "));
+      }
+      line("Sum per slangetype:");
+      for (const [t, v] of Object.entries(s.byType)) line(`  ${t}: ${v.n} stk, ${nf(v.mm / 1000, 2)} m`);
+      if (Object.keys(s.ends).length) { line("Innsatser / endekoblinger:"); for (const [t, n] of Object.entries(s.ends)) line(`  ${t}: ${n} stk`); }
+      if (Object.keys(s.ferr).length) { line("Hylser:"); for (const [t, n] of Object.entries(s.ferr)) line(`  ${t}: ${n} stk`); }
+    }
+    if ((job.items || []).length) {
+      hr(); line("VARER");
+      for (const r of job.items) line(`${r.nr ? r.nr + "  " : ""}${r.desc}  –  ${nf(r.qty, num(r.qty) % 1 ? 2 : 0)} ${r.unit || "stk"}`);
+    }
+    if (job.notes) { hr(); line("NOTATER / AVVIK"); line(job.notes); }
+    return L.join("\n");
+  }
+  function csvText(job) {
+    const q = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+    const rows = [["Kategori", "Varenr/type", "Beskrivelse", "Antall", "Enhet"]];
+    const s = hoseSums(job);
+    for (const [t, v] of Object.entries(s.byType)) rows.push(["Slange", t, "Slange " + t, nf(v.mm / 1000, 2), "m"]);
+    for (const [t, n] of Object.entries(s.ends)) rows.push(["Innsats", t, "Innsats / endekobling", n, "stk"]);
+    for (const [t, n] of Object.entries(s.ferr)) rows.push(["Hylse", t, "Hylse", n, "stk"]);
+    for (const r of job.items || []) rows.push(["Vare", r.nr || "", r.desc, nf(r.qty, num(r.qty) % 1 ? 2 : 0), r.unit || "stk"]);
+    for (const [k, v] of Object.entries(hourSums(job).by)) rows.push(["Timer", k, "Arbeid " + k, nf(v, 1), "t"]);
+    return "﻿" + rows.map((r) => r.map(q).join(";")).join("\r\n");
+  }
+
+  // ---------- views ----------
+  function render() {
+    const app = $("#app");
+    const y = window.scrollY;
+    if (S.view === "job" && S.jobs[S.jobId]) app.innerHTML = jobView(S.jobs[S.jobId]);
+    else if (S.view === "settings") app.innerHTML = settingsView();
+    else { S.view = "list"; app.innerHTML = listView(); }
+    setSave(S.saveState);
+    if (S.keepScroll) window.scrollTo(0, y);
+    S.keepScroll = false;
+  }
+
+  function header(title, sub, left, right) {
+    if (!left) return `<header class="top"><div class="top-in"><div class="wm" role="img" aria-label="${esc(BRAND.name)}"><span class="wm-a">${esc(BRAND.name)}</span><span class="wm-b">${esc(BRAND.tag)}</span></div><div class="top-right"><span class="sub">${esc(sub)}</span><span class="row">${right || ""}<span id="savestate" class="savestate"></span></span></div></div></header>`;
+    return `<header class="top"><div class="top-in">${left}<div class="grow"><div class="sub">${esc(sub)}</div><h1>${esc(title)}</h1></div><span id="savestate" class="savestate"></span>${right || ""}</div></header>`;
+  }
+
+  function listView() {
+    const all = Object.values(S.jobs).filter((j) => j && j.type === "job");
+    const q = S.q.trim().toLowerCase();
+    const list = all
+      .filter((j) => S.filter === "alle" || (S.filter === "aktive" ? j.status !== "sendt" : j.status === "sendt"))
+      .filter((j) => !q || [j.kunde, j.sted, j.ref, j.beskrivelse, j.kontakt].join(" ").toLowerCase().includes(q))
+      .sort((a, b) => (b.updated || 0) - (a.updated || 0));
+    const nActive = all.filter((j) => j.status !== "sendt").length;
+    let body;
+    if (S.mode === "loading" && !all.length) body = `<div class="empty"><p>Henter jobbene dine …</p></div>`;
+    else if (!all.length) body = `<div class="empty"><h2>Ingen jobber ennå</h2><p>Opprett en jobb på en kunde. Deretter kan du måle opp slanger, føre varer og timer, og sende en oppsummering på e-post når jobben er ferdig.</p><div class="row"><button class="btn primary" data-a="new">Ny jobb</button><button class="btn" data-a="example">Last inn eksempeljobb</button></div></div>`;
+    else if (!list.length) body = `<div class="empty"><p>Ingen jobber passer søket eller filteret.</p></div>`;
+    else body = `<div class="joblist">${list.map(jobCard).join("")}</div>`;
+    return header("", nActive ? nActive + (nActive === 1 ? " aktiv jobb" : " aktive jobber") : "Ingen aktiv jobb", "", `<button class="iconbtn" data-a="settings">Innstillinger</button>`) +
+      `<main>${modeBanner()}
+      <div class="pagehead"><h2>Jobber</h2><button class="btn primary" data-a="new">+ Ny jobb</button></div>
+      <div class="toolbar"><input id="q" class="search" type="search" placeholder="Søk kunde, sted, ref …" value="${esc(S.q)}" aria-label="Søk i jobber"></div>
+      <div class="seg" role="group" aria-label="Filter">${[["aktive", "Pågår / ferdig"], ["sendt", "Sendt"], ["alle", "Alle"]].map(([k, l]) => `<button data-a="filter" data-v="${k}" aria-pressed="${S.filter === k}">${l}</button>`).join("")}</div>
+      ${body}</main>`;
+  }
+  function modeBanner() {
+    return S.mode === "local" && !STANDALONE ? `<div class="banner">Jobbene lagres bare i denne nettleseren på denne enheten. Åpne appen fra claude.ai mens du er innlogget for å lagre på kontoen din og få tilgang fra flere enheter.</div>` : "";
+  }
+  function jobCard(j) {
+    const s = hoseSums(j), h = hourSums(j);
+    const st = j.status || "aktiv";
+    return `<button class="jobcard ${st}" data-a="open" data-id="${esc(j.id)}">
+      <span class="stripe"></span>
+      <span class="grow"><span class="jt">${esc(j.kunde || "Uten kunde")}${j.example ? ' <span class="ex">Eksempel</span>' : ""}</span><span class="meta">${esc([j.sted, fmtDate(j.dato), j.ref && "Ref " + j.ref].filter(Boolean).join(" · "))}</span></span>
+      <span class="pill ${st}">${STATUS[st]}</span>
+      <span class="stats"><span><b class="num">${s.count}</b> slanger</span><span><b class="num">${(j.items || []).length}</b> varer</span><span><b class="num">${nf(h.tot, 1)}</b> timer</span></span>
+    </button>`;
+  }
+
+  function jobView(j) {
+    const counts = { hoses: (j.hoses || []).length, items: (j.items || []).length, hours: nf(hourSums(j).tot, 1) + " t" };
+    const tabs = `<nav class="tabs"><div class="tabs-in" role="tablist">${TABS.map(([k, l]) => `<button class="tab" role="tab" data-a="tab" data-v="${k}" aria-selected="${S.tab === k}">${ICONS[k]}<span>${l}</span>${counts[k] !== undefined && counts[k] !== 0 && counts[k] !== "0,0 t" ? `<span class="c">${counts[k]}</span>` : ""}</button>`).join("")}</div></nav>`;
+    let content;
+    if (S.tab === "info") content = infoTab(j);
+    else if (S.tab === "notes") content = notesTab(j);
+    else if (S.tab === "send") content = sendTab(j);
+    else content = modTab(j, S.tab);
+    return header(j.kunde || "Ny jobb", STATUS[j.status || "aktiv"] + (j.sted ? " · " + j.sted : ""), `<button class="iconbtn" data-a="back" aria-label="Tilbake til jobblisten">‹ Jobber</button>`) + tabs + `<main>${content}</main>`;
+  }
+
+  function fieldHtml(f, val, prefix) {
+    const id = prefix + f.k;
+    const v = val != null ? val : "";
+    let ctl;
+    if (f.opts) ctl = `<select id="${id}" name="${f.k}">${f.opts.map((o) => `<option${o === v ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+    else if (f.area) ctl = `<textarea id="${id}" name="${f.k}" data-f="${f.k}" placeholder="${esc(f.ph || "")}">${esc(v)}</textarea>`;
+    else ctl = `<input id="${id}" name="${f.k}" ${f.num ? 'inputmode="decimal"' : ""} type="${f.type || "text"}" value="${esc(v)}" placeholder="${esc(f.ph || "")}" ${f.list ? `list="${id}-dl" autocomplete="off"` : ""} ${f.bind ? `data-f="${f.k}"` : ""}>` +
+      (f.list ? `<datalist id="${id}-dl">${suggestions(f).map((s) => `<option value="${esc(s)}"></option>`).join("")}</datalist>` : "");
+    return `<div class="fld w${f.w} ${f.cls || ""}"><label for="${id}">${esc(f.l)}${f.req ? " *" : ""}</label>${ctl}</div>`;
+  }
+
+  function infoTab(j) {
+    const F = [
+      { k: "kunde", l: "Kunde", w: 4, bind: true, ph: "Firmanavn" },
+      { k: "kontakt", l: "Kontaktperson", w: 2, bind: true },
+      { k: "sted", l: "Sted / fartøy / anlegg", w: 2, bind: true },
+      { k: "ref", l: "Kundens ref. / PO", w: 2, bind: true },
+      { k: "dato", l: "Dato", w: 2, bind: true, type: "date" },
+      { k: "utfort", l: "Utført av", w: 4, bind: true, ph: "Navn på teknikere" },
+      { k: "beskrivelse", l: "Oppdrag / beskrivelse", w: 4, bind: true, area: true, ph: "Hva skal gjøres?" }
+    ];
+    const st = j.status || "aktiv";
+    return `<section class="panel"><h2>Jobb og kunde</h2><div class="form">${F.map((f) => fieldHtml(f, j[f.k], "i-")).join("")}</div></section>
+      <section class="panel"><span class="label">Status</span><div class="seg" role="group" aria-label="Status">${Object.entries(STATUS).map(([k, l]) => `<button data-a="status" data-v="${k}" aria-pressed="${st === k}">${l}</button>`).join("")}</div>
+      ${j.sentAt ? `<p class="hint">Sist sendt ${esc(new Date(j.sentAt).toLocaleString("nb-NO"))}${j.sentTo ? " til " + esc(j.sentTo) : ""}.</p>` : ""}</section>
+      <section class="panel"><span class="label">Slett jobb</span><p class="hint">Sletter jobben og alt som er registrert på den. Kan ikke angres.</p>
+      <div><button class="btn danger ${S.armed === "del" ? "armed" : ""}" data-a="deljob">${S.armed === "del" ? "Trykk igjen for å slette" : "Slett jobben"}</button></div></section>`;
+  }
+
+  function notesTab(j) {
+    return `<section class="panel"><h2>Notater og avvik</h2><div class="form">${fieldHtml({ k: "notes", l: "Notater", w: 4, area: true, ph: "Avvik, anbefalinger, ting som må følges opp …" }, j.notes, "n-")}</div><p class="hint">Teksten tas med nederst i oppsummeringen.</p></section>`;
+  }
+
+  function modTab(j, m) {
+    const def = MODS[m];
+    const rows = j[m] || [];
+    const editing = S.edit && S.edit.mod === m ? S.edit : null;
+    const base = editing ? rows[editing.idx] : formDefaults(j, m);
+    const fields = def.fields.map((f) => Object.assign({ mod: m }, f));
+    const form = `<form class="panel" data-mod="${m}" id="form-${m}"><h2>${editing ? "Endre rad" : def.add}</h2><div class="form">${fields.map((f) => fieldHtml(f, base ? base[f.k] : "", m + "-")).join("")}</div>
+      <div class="row"><button class="btn ${editing ? "dark" : "primary"}" type="submit">${editing ? "Lagre endring" : def.add}</button>${editing ? `<button class="btn ghost" type="button" data-a="canceledit">Avbryt</button>` : ""}</div></form>`;
+    const list = rows.length ? `<div class="ledger">${rows.map((r, i) => rowHtml(m, r, i, editing && editing.idx === i)).join("")}</div>` : `<p class="hint">Ingenting registrert ennå.</p>`;
+    return form + `<section class="panel"><div class="row"><h2 class="grow">${def.title}</h2><span class="label">${rows.length} rader</span></div>${totalsHtml(j, m)}${list}</section>`;
+  }
+  function formDefaults(j, m) {
+    const def = MODS[m], o = {};
+    for (const f of def.fields) if (f.def != null) o[f.k] = typeof f.def === "function" ? f.def() : f.def;
+    const last = (S.last && S.last[j.id + m]) || null;
+    if (last) for (const k of def.keep) if (last[k] != null) o[k] = last[k];
+    if (m === "hoses") { const ps = (j.hoses || []).map((h) => parseInt(h.pos, 10)).filter((n) => isFinite(n)); o.pos = String(ps.length ? Math.max.apply(null, ps) + 1 : 1); }
+    return o;
+  }
+  function rowHtml(m, r, i, isEdit) {
+    const acts = `<span class="acts"><button class="btn sm" data-a="editrow" data-m="${m}" data-i="${i}">Endre</button><button class="btn sm danger ${S.armed === m + i ? "armed" : ""}" data-a="delrow" data-m="${m}" data-i="${i}" aria-label="Slett rad">${S.armed === m + i ? "Slett?" : "×"}</button></span>`;
+    let tag = "", main = "";
+    if (m === "hoses") {
+      tag = esc(r.pos || "–");
+      main = `<strong>${esc(r.type)}</strong> · <span class="num">${nf(r.len, 0)} mm</span>${num(r.qty) > 1 ? ` <span class="num">×${esc(r.qty)}</span>` : ""}
+        <div class="d">${esc([r.sted, (r.e1 || r.e2) && (r.e1 || "–") + " / " + (r.e2 || "–"), r.hylse && "Hylse " + r.hylse, r.bar && r.bar + " bar", r.note].filter(Boolean).join(" · "))}</div>`;
+    } else if (m === "items") {
+      tag = `<span class="num">${nf(r.qty, num(r.qty) % 1 ? 2 : 0)}</span>`;
+      main = `<strong>${esc(r.desc)}</strong> <span class="d">${esc(r.unit || "stk")}</span><div class="d num">${esc(r.nr || "")}</div>`;
+    } else {
+      tag = `<span class="num">${nf(r.h, 1)}</span>`;
+      main = `<strong>${esc(fmtDate(r.date))}</strong> ${r.from && r.to ? `<span class="num">${esc(r.from)}–${esc(r.to)}</span>` : ""} · ${esc(r.kind || "Normal")}<div class="d">${esc([r.tech, r.desc].filter(Boolean).join(" · "))}</div>`;
+    }
+    return `<div class="lrow ${isEdit ? "editing" : ""}"><span class="tag">${tag}</span><div class="main">${main}</div>${acts}</div>`;
+  }
+  function totalsHtml(j, m) {
+    if (m === "hoses" && (j.hoses || []).length) {
+      const s = hoseSums(j);
+      const tiles = Object.entries(s.byType).map(([t, v]) => `<div class="tot"><div class="v">${nf(v.mm / 1000, 2)} m</div><div class="k">${esc(t)} · ${v.n} stk</div></div>`).join("");
+      const tbl = (title, o) => Object.keys(o).length ? `<div><span class="label">${title}</span><table class="sumtable">${Object.entries(o).map(([k, n]) => `<tr><td>${esc(k)}</td><td>${n} stk</td></tr>`).join("")}</table></div>` : "";
+      return `<div class="totals">${tiles}</div>${tbl("Innsatser", s.ends)}${tbl("Hylser (2 per slange)", s.ferr)}`;
+    }
+    if (m === "hours" && (j.hours || []).length) {
+      const h = hourSums(j);
+      return `<div class="totals"><div class="tot"><div class="v">${nf(h.tot, 1)} t</div><div class="k">Totalt</div></div>${Object.entries(h.by).map(([k, v]) => `<div class="tot"><div class="v">${nf(v, 1)} t</div><div class="k">${esc(k)}</div></div>`).join("")}</div>`;
+    }
+    return "";
+  }
+
+  function sendTab(j) {
+    const to = j.sendTo != null ? j.sendTo : S.settings.email || "";
+    const subject = `Jobbrapport ${j.kunde || ""}${j.sted ? " – " + j.sted : ""} ${fmtDate(j.dato)}`.trim();
+    const body = summaryText(j);
+    const href = "mailto:" + encodeURIComponent(to).replace(/%40/g, "@") + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+    const long = href.length > 1900;
+    return `<section class="panel"><h2>Send oppsummering</h2>
+      <div class="form">${fieldHtml({ k: "sendTo", l: "Send til e-post", w: 4, bind: true, type: "email", ph: "ordre@firma.no" }, to, "s-")}</div>
+      <div class="row"><a class="btn primary" id="mailbtn" href="${esc(href)}"${STANDALONE ? "" : ' target="_blank" rel="noopener"'}>Åpne i e-post</a>
+      <button class="btn" data-a="copy">Kopier tekst</button>
+      ${downloads || STANDALONE ? `<button class="btn" data-a="csv">Last ned CSV for ordre</button>` : ""}</div>
+      <p class="hint">«Åpne i e-post» lager en ferdig utfylt e-post i e-postappen din. Fungerer det ikke på enheten${long ? ", eller blir teksten kuttet (lange rapporter kan bli for lange for e-postlenker)" : ""}, trykk «Kopier tekst» og lim inn i en ny e-post.</p>
+      <div class="row"><button class="btn dark" data-a="marksent">Marker som sendt</button>${to ? `<button class="btn ghost" data-a="defaultto">Bruk som standardadresse</button>` : ""}</div></section>
+      <section class="panel"><div class="row"><h2 class="grow">Forhåndsvisning</h2><span class="label">Emne: ${esc(subject)}</span></div><div class="preview" id="preview">${esc(body)}</div></section>`;
+  }
+
+  function settingsView() {
+    return header("Innstillinger", "Jobbkort", `<button class="iconbtn" data-a="back">‹ Jobber</button>`) +
+      `<main><section class="panel"><h2>Standardverdier</h2><div class="form">
+      ${fieldHtml({ k: "email", l: "Standard e-post for oppsummering", w: 4, type: "email", ph: "ordre@firma.no" }, S.settings.email, "set-")}
+      ${fieldHtml({ k: "tech", l: "Ditt navn (forslag på timer)", w: 4 }, S.settings.tech, "set-")}</div>
+      <p class="hint">Brukes som forslag i nye jobber.</p></section>
+      <section class="panel"><span class="label">Lagring</span><p class="hint">${S.mode === "db" ? "Jobbene lagres privat på claude.ai-kontoen din. Bare du ser dem, også om du deler lenken til appen." : "Jobbene lagres i nettleseren på denne enheten. De synkes ikke til andre enheter, og de forsvinner hvis du sletter nettstedsdata for appen."}</p></section></main>`;
+  }
+
+  // ---------- actions ----------
+  function newJob(example) {
+    const id = "job-" + uid8();
+    const j = { type: "job", id, kunde: "", kontakt: "", sted: "", ref: "", dato: today(), utfort: S.settings.tech || "", beskrivelse: "", status: "aktiv", hoses: [], items: [], hours: [], notes: "", created: Date.now(), updated: Date.now() };
+    if (example) Object.assign(j, {
+      example: true, kunde: "Eksempel Rederi AS", kontakt: "Kari Maskinsjef", sted: "MS Eksempel, kai 4", ref: "PO-1234",
+      beskrivelse: "Bytte av hydraulikkslanger på dekkskran etter lekkasje.",
+      hoses: [
+        { pos: "1", sted: "Dekkskran, hovedsylinder", type: '1/2" 2SN', len: "1250", qty: "2", e1: "DKOL M22", e2: "DKOL 90° M22", hylse: "00210-08", bar: "250", note: "" },
+        { pos: "2", sted: "Dekkskran, sving", type: '3/8" 2SN', len: "800", qty: "1", e1: "DKOL M18", e2: "DKOL M18", hylse: "00210-06", bar: "250", note: "Skifte beskyttelsesstrømpe" }
+      ],
+      items: [{ nr: "", desc: "Hydraulikkolje HV46", qty: "20", unit: "l" }],
+      hours: [{ date: today(), tech: S.settings.tech || "", from: "07:30", to: "15:00", h: "7.5", kind: "Normal", desc: "Oppmåling og montering" }],
+      notes: "Eksempeljobb. Slett den når du har sett hvordan appen virker."
+    });
+    S.jobs[id] = j;
+    touch(id);
+    S.view = "job"; S.jobId = id; S.tab = "info"; S.edit = null;
+    render();
+    if (!example) setTimeout(() => { const k = $("#i-kunde"); if (k) k.focus(); }, 30);
+  }
+
+  function readForm(form, m) {
+    const o = {};
+    for (const f of MODS[m].fields) { const el = form.elements[f.k]; if (el) o[f.k] = el.value.trim(); }
+    if (m === "hours" && !o.h && o.from && o.to) o.h = String(calcH(o.from, o.to));
+    return o;
+  }
+  function calcH(a, b) {
+    const t = (s) => { const [h, m] = s.split(":").map(Number); return h * 60 + (m || 0); };
+    let d = t(b) - t(a); if (d < 0) d += 1440;
+    return Math.round(d / 15) / 4;
+  }
+
+  document.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-a]");
+    if (!b) return;
+    const a = b.dataset.a, j = S.jobs[S.jobId];
+    if (a !== "deljob" && a !== "delrow" && S.armed) { S.armed = null; }
+    switch (a) {
+      case "new": newJob(false); break;
+      case "example": newJob(true); break;
+      case "open": S.view = "job"; S.jobId = b.dataset.id; S.tab = "info"; S.edit = null; render(); window.scrollTo(0, 0); break;
+      case "back": S.view = "list"; S.jobId = null; S.edit = null; render(); window.scrollTo(0, 0); break;
+      case "settings": S.view = "settings"; render(); break;
+      case "filter": S.filter = b.dataset.v; render(); break;
+      case "tab": S.tab = b.dataset.v; S.edit = null; render(); window.scrollTo(0, 0); break;
+      case "status": j.status = b.dataset.v; touch(j.id); render(); break;
+      case "deljob":
+        if (S.armed !== "del") { S.armed = "del"; S.keepScroll = true; render(); return; }
+        S.armed = null; delete S.jobs[j.id]; dirty.add(j.id); flush(j.id); S.view = "list"; S.jobId = null; render(); toast("Jobben er slettet"); break;
+      case "editrow": S.edit = { mod: b.dataset.m, idx: +b.dataset.i }; render(); window.scrollTo(0, 0); break;
+      case "canceledit": S.edit = null; render(); break;
+      case "delrow": {
+        const key = b.dataset.m + b.dataset.i;
+        if (S.armed !== key) { S.armed = key; S.keepScroll = true; render(); return; }
+        S.armed = null; j[b.dataset.m].splice(+b.dataset.i, 1); S.edit = null; touch(j.id); S.keepScroll = true; render(); break;
+      }
+      case "copy": {
+        const txt = summaryText(j);
+        try { await navigator.clipboard.writeText(txt); toast("Teksten er kopiert"); }
+        catch (err) { const p = $("#preview"); const r = document.createRange(); r.selectNodeContents(p); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Teksten er merket. Kopier med Ctrl+C eller hold inne."); }
+        break;
+      }
+      case "csv": {
+        const name = ("ordre-" + (j.kunde || "jobb") + "-" + (j.dato || today())).replace(/[^\wæøåÆØÅ.-]+/g, "_") + ".csv";
+        if (STANDALONE) {
+          const url = URL.createObjectURL(new Blob([csvText(j)], { type: "text/csv;charset=utf-8" }));
+          const link = document.createElement("a"); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+          break;
+        }
+        if (!downloads) return;
+        try { await downloads.save({ filename: name, data: csvText(j) }); toast("CSV lagret"); }
+        catch (err) { if (err && err.code !== "declined") toast("Kunne ikke lage filen her."); }
+        break;
+      }
+      case "marksent": j.status = "sendt"; j.sentAt = Date.now(); j.sentTo = j.sendTo != null ? j.sendTo : S.settings.email; touch(j.id); toast("Markert som sendt"); S.keepScroll = true; render(); break;
+      case "defaultto": S.settings.email = j.sendTo != null ? j.sendTo : S.settings.email; touch("settings"); toast("Lagret som standardadresse"); break;
+    }
+  });
+
+  document.addEventListener("submit", (e) => {
+    const form = e.target.closest("form[data-mod]");
+    if (!form) return;
+    e.preventDefault();
+    const m = form.dataset.mod, j = S.jobs[S.jobId];
+    const o = readForm(form, m);
+    const miss = MODS[m].fields.filter((f) => f.req && !o[f.k]);
+    if (miss.length) { toast("Fyll ut: " + miss.map((f) => f.l).join(", ")); const el = form.elements[miss[0].k]; if (el) el.focus(); return; }
+    j[m] = j[m] || [];
+    if (S.edit && S.edit.mod === m) { j[m][S.edit.idx] = o; S.edit = null; toast("Endringen er lagret"); }
+    else { j[m].push(o); toast(MODS[m].title === "Slanger" ? "Slange " + (o.pos || "") + " lagt til" : "Lagt til"); }
+    S.last = S.last || {}; S.last[j.id + m] = o;
+    touch(j.id);
+    render();
+    const first = $(`#form-${m} input:not([type=date])`);
+    if (first) { const f2 = m === "hoses" ? $("#hoses-len") : first; if (f2) f2.focus(); }
+  });
+
+  document.addEventListener("input", (e) => {
+    const t = e.target;
+    if (t.id === "q") { S.q = t.value; const pos = t.selectionStart; render(); const q = $("#q"); q.focus(); try { q.setSelectionRange(pos, pos); } catch (x) {} return; }
+    if (t.id && t.id.startsWith("set-")) { S.settings[t.name] = t.value; touch("settings"); return; }
+    if ((t.id === "hours-from" || t.id === "hours-to")) {
+      const f = $("#hours-from").value, to = $("#hours-to").value;
+      if (f && to) $("#hours-h").value = String(calcH(f, to)).replace(".", ",");
+      return;
+    }
+    const j = S.jobs[S.jobId];
+    if (!j) return;
+    if (t.dataset.f) {
+      j[t.dataset.f] = t.value;
+      touch(j.id);
+      if (t.dataset.f === "sendTo") { const mb = $("#mailbtn"); if (mb) mb.setAttribute("href", sendHref(j)); }
+      if (t.dataset.f === "kunde" || t.dataset.f === "sted") { const h1 = $(".top h1"); if (h1) h1.textContent = j.kunde || "Ny jobb"; }
+    }
+  });
+  function sendHref(j) {
+    const to = j.sendTo != null ? j.sendTo : S.settings.email || "";
+    const subject = `Jobbrapport ${j.kunde || ""}${j.sted ? " – " + j.sted : ""} ${fmtDate(j.dato)}`.trim();
+    return "mailto:" + encodeURIComponent(to).replace(/%40/g, "@") + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(summaryText(j));
+  }
+
+  init();
+})();
 </script>
 </body>
 </html>
