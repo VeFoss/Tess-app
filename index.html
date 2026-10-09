@@ -196,6 +196,9 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
 <div id="app"></div>
 <div id="toast" class="toast" hidden></div>
 
+<!--SUPABASE-START-->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+<!--SUPABASE-END-->
 <script>
 (function () {
   "use strict";
@@ -203,6 +206,11 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
   // ---------- config ----------
   const BRAND = { name: "TESS", tag: "TEKNISK FAGHANDEL", logo: "tess-logo.png" };
   const STANDALONE = !window.claude;
+  // Supabase project for sync between devices. The publishable key is meant to sit in client code;
+  // row level security in the database keeps each user to their own rows.
+  const SB_URL = "https://lkynhhyicwfnuawwqmms.supabase.co";
+  const SB_KEY = "sb_publishable_0th-iSSbJa3Z_8irbzE0uQ_VjvVjhxW";
+  const CLOUD = STANDALONE && !!SB_URL;
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -379,20 +387,30 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
   const STATUS = { aktiv: "Pågår", ferdig: "Ferdig", sendt: "Sendt" };
 
   // ---------- state ----------
-  const S = { jobs: {}, orders: [], settings: { type: "settings", email: "", tech: "" }, view: "list", home: "jobs", jobId: null, tab: "info", filter: "aktive", tfilter: "alle", ofilter: "alle", q: "", edit: null, mode: "loading", saveState: "", armed: null };
+  const S = { jobs: {}, orders: [], ordersUpdated: 0, settings: { type: "settings", email: "", tech: "" }, view: "list", home: "jobs", jobId: null, tab: "info", filter: "aktive", tfilter: "alle", ofilter: "alle", q: "", edit: null, mode: "loading", saveState: "", armed: null };
   let col = null, downloads = null;
   const dirty = new Set(), timers = {}, inflight = {}, again = {};
 
   // ---------- storage ----------
+  // Local copy on this device. When signed in, the keys are scoped to the user so two people can share a device.
+  let prefix = "jobbkort.";
+  const pending = new Set();
   function saveLocal() {
-    lsSet("jobbkort.jobs", JSON.stringify(S.jobs));
-    lsSet("jobbkort.orders", JSON.stringify(S.orders));
-    lsSet("jobbkort.settings", JSON.stringify(S.settings));
+    lsSet(prefix + "jobs", JSON.stringify(S.jobs));
+    lsSet(prefix + "orders", JSON.stringify({ list: S.orders, updated: S.ordersUpdated }));
+    lsSet(prefix + "settings", JSON.stringify(S.settings));
+    if (prefix !== "jobbkort.") lsSet(prefix + "pending", JSON.stringify([...pending]));
   }
   function loadLocal() {
-    try { const j = JSON.parse(lsGet("jobbkort.jobs") || "{}"); if (j && typeof j === "object") S.jobs = j; } catch (e) {}
-    try { const o = JSON.parse(lsGet("jobbkort.orders") || "[]"); if (Array.isArray(o)) S.orders = o; } catch (e) {}
-    try { const s = JSON.parse(lsGet("jobbkort.settings") || "null"); if (s) S.settings = Object.assign(S.settings, s); } catch (e) {}
+    S.jobs = {}; S.orders = []; S.ordersUpdated = 0; S.settings = { type: "settings", email: "", tech: "" };
+    try { const j = JSON.parse(lsGet(prefix + "jobs") || "{}"); if (j && typeof j === "object") S.jobs = j; } catch (e) {}
+    try {
+      const o = JSON.parse(lsGet(prefix + "orders") || "[]");
+      if (Array.isArray(o)) S.orders = o; else if (o && Array.isArray(o.list)) { S.orders = o.list; S.ordersUpdated = o.updated || 0; }
+    } catch (e) {}
+    try { const s = JSON.parse(lsGet(prefix + "settings") || "null"); if (s) S.settings = Object.assign(S.settings, s); } catch (e) {}
+    pending.clear();
+    try { for (const id of JSON.parse(lsGet(prefix + "pending") || "[]")) pending.add(id); } catch (e) {}
   }
   // One-time import from the earlier Tess Mobilservice app (same site, key tess_v4). The old data is left in place.
   function migrateOld() {
@@ -436,14 +454,17 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
     }
     return touchedOpen;
   }
+  const SAVE_TEXT = { saving: "Lagrer …", sync: "Synker …", ok: "Lagret", synced: "Synket", offline: "Frakoblet · lagret på enheten", err: "Ikke synket", "": "" };
   function setSave(st) {
     S.saveState = st;
     const el = $("#savestate");
-    if (el) { el.textContent = st === "saving" ? "Lagrer …" : st === "err" ? "Ikke lagret" : st === "ok" ? "Lagret" : ""; el.className = "savestate" + (st === "err" ? " err" : ""); }
+    if (el) { el.textContent = SAVE_TEXT[st] || ""; el.className = "savestate" + (st === "err" || st === "offline" ? " err" : ""); }
   }
   function touch(id) {
     const job = S.jobs[id];
     if (job) job.updated = Date.now();
+    if (id === "settings") S.settings.updated = Date.now();
+    if (id === "orders") S.ordersUpdated = Date.now();
     dirty.add(id);
     clearTimeout(timers[id]);
     timers[id] = setTimeout(() => flush(id), 500);
@@ -451,10 +472,11 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
   }
   function docBody(id) {
     if (id === "settings") return S.settings;
-    if (id === "orders") return { type: "orders", list: S.orders };
+    if (id === "orders") return { type: "orders", list: S.orders, updated: S.ordersUpdated };
     return S.jobs[id];
   }
   async function flush(id) {
+    if (prefix !== "jobbkort.") { pending.add(id); dirty.delete(id); saveLocal(); if (sb) schedulePush(); else setSave("offline"); return; }
     if (inflight[id]) { again[id] = true; return; }
     inflight[id] = true;
     try {
@@ -474,11 +496,167 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
     }
   }
 
+  // ---------- cloud sync (Supabase) ----------
+  let sb = null, sbUser = null, syncing = false, syncAgain = false, pushT = null;
+  const siteUrl = () => location.origin + location.pathname;
+  async function initCloud() {
+    S.mode = "cloud";
+    S.view = "boot";
+    render();
+    if (window.supabase && window.supabase.createClient) {
+      sb = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+      sb.auth.onAuthStateChange((ev, session) => {
+        if (ev === "PASSWORD_RECOVERY") { S.view = "newpass"; render(); return; }
+        // Defer: Supabase calls made inside this callback can stall the client.
+        if (ev === "SIGNED_IN" && session && (!sbUser || sbUser.id !== session.user.id)) setTimeout(() => { if (!sbUser || sbUser.id !== session.user.id) startUser(session.user); }, 0);
+      });
+      let session = null;
+      try { session = (await sb.auth.getSession()).data.session; } catch (e) {}
+      if (session) { if (!sbUser) startUser(session.user); }
+      else if (S.view !== "newpass") { S.view = "login"; render(); }
+    } else {
+      // The sync library could not load (offline without cache). Keep working on the last user's local copy.
+      const last = lsGet("jobbkort.lastUser");
+      if (last) { prefix = "jobbkort.u." + last + "."; loadLocal(); S.view = "list"; render(); setSave("offline"); }
+      else { S.view = "login"; render(); }
+    }
+    addEventListener("online", syncNow);
+    addEventListener("focus", syncNow);
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") syncNow(); });
+    setInterval(() => { if (document.visibilityState === "visible") syncNow(); }, 30000);
+  }
+  function startUser(user) {
+    sbUser = user;
+    prefix = "jobbkort.u." + user.id + ".";
+    const fresh = lsGet(prefix + "jobs") == null;
+    loadLocal();
+    let imported = 0;
+    if (fresh && !lsGet("jobbkort.adopted")) {
+      // First sign-in on this device: take over what was stored here before sync existed.
+      lsSet("jobbkort.adopted", user.id);
+      const keep = prefix; prefix = "jobbkort."; loadLocal(); imported = migrateOld(); prefix = keep;
+      for (const id of Object.keys(S.jobs)) pending.add(id);
+      if (S.orders.length) { S.ordersUpdated = Date.now(); pending.add("orders"); }
+      if (S.settings.email || S.settings.tech) { S.settings.updated = Date.now(); pending.add("settings"); }
+    }
+    lsSet("jobbkort.lastUser", user.id);
+    saveLocal();
+    S.view = "list"; S.home = "jobs";
+    render();
+    if (imported) toast(imported + (imported === 1 ? " jobb" : " jobber") + " hentet fra den gamle appen");
+    syncNow();
+  }
+  function schedulePush() { clearTimeout(pushT); setSave("saving"); pushT = setTimeout(syncNow, 1200); }
+  async function syncNow() {
+    if (!sb || !sbUser) return;
+    if (syncing) { syncAgain = true; return; }
+    if (!navigator.onLine) { setSave("offline"); return; }
+    syncing = true;
+    setSave("sync");
+    try {
+      const ids = [...pending];
+      if (ids.length) {
+        const sent = {};
+        const rows = ids.map((id) => {
+          const b = docBody(id);
+          const updated = (b && b.updated) || Date.now();
+          sent[id] = updated;
+          return { user_id: sbUser.id, id, data: b ? clone(b) : {}, updated, deleted: !b };
+        });
+        const { error } = await sb.from("docs").upsert(rows, { onConflict: "user_id,id" });
+        if (error) throw error;
+        for (const id of ids) { const b = docBody(id); if (!dirty.has(id) && ((b && b.updated) || sent[id]) === sent[id]) pending.delete(id); }
+      }
+      const { data, error } = await sb.from("docs").select("id,data,updated,deleted").range(0, 4999);
+      if (error) throw error;
+      const changed = mergeRemote(data || []);
+      saveLocal();
+      setSave(pending.size ? "saving" : "synced");
+      if (changed && !isTyping() && S.view !== "login" && S.view !== "newpass") { S.keepScroll = true; render(); }
+      if (pending.size) schedulePush();
+    } catch (err) {
+      setSave(navigator.onLine ? "err" : "offline");
+    } finally {
+      syncing = false;
+      if (syncAgain) { syncAgain = false; syncNow(); }
+    }
+  }
+  function mergeRemote(rows) {
+    let changed = false;
+    const seen = new Set();
+    for (const r of rows) {
+      seen.add(r.id);
+      if (pending.has(r.id) || dirty.has(r.id)) continue;
+      const up = Number(r.updated) || 0;
+      if (r.id === "settings") { if (!r.deleted && up > (S.settings.updated || 0)) { S.settings = Object.assign({ type: "settings", email: "", tech: "" }, r.data); changed = true; } continue; }
+      if (r.id === "orders") { if (!r.deleted && up > (S.ordersUpdated || 0)) { S.orders = (r.data && r.data.list) || []; S.ordersUpdated = up; changed = true; } continue; }
+      const cur = S.jobs[r.id];
+      if (r.deleted) { if (cur) { delete S.jobs[r.id]; if (S.jobId === r.id) { S.view = "list"; S.jobId = null; } changed = true; } continue; }
+      if (!cur || up > (cur.updated || 0)) { S.jobs[r.id] = r.data; changed = true; }
+    }
+    // Anything here that the server has never seen gets uploaded.
+    for (const id of Object.keys(S.jobs)) if (!seen.has(id)) pending.add(id);
+    if (!seen.has("orders") && S.orders.length) pending.add("orders");
+    if (!seen.has("settings") && (S.settings.email || S.settings.tech)) pending.add("settings");
+    return changed;
+  }
+  const AUTH_ERR = [
+    [/invalid login credentials/i, "Feil e-post eller passord."],
+    [/email not confirmed/i, "E-posten er ikke bekreftet ennå. Trykk på lenken i e-posten fra Supabase først."],
+    [/already registered|already exists/i, "Det finnes allerede en bruker med denne e-posten. Logg inn i stedet."],
+    [/password should be at least|weak password/i, "Passordet må ha minst 6 tegn."],
+    [/rate limit|too many/i, "For mange forsøk. Vent litt og prøv igjen."],
+    [/invalid email|unable to validate email/i, "E-postadressen ser ikke riktig ut."]
+  ];
+  const authMsg = (e) => { const m = (e && e.message) || String(e || ""); for (const [re, t] of AUTH_ERR) if (re.test(m)) return t; return navigator.onLine ? "Noe gikk galt: " + m : "Du er ikke på nett."; };
+  async function authAction(kind) {
+    const email = ($("#l-email") || {}).value, pass = ($("#l-pass") || {}).value;
+    const msg = $("#l-msg");
+    const say = (t) => { if (msg) msg.textContent = t; };
+    if (!sb) { say("Får ikke kontakt med innloggingstjenesten. Sjekk nettet og last siden på nytt."); return; }
+    try {
+      if (kind === "login") {
+        if (!email || !pass) return say("Fyll inn e-post og passord.");
+        say("Logger inn …");
+        const { data, error } = await sb.auth.signInWithPassword({ email: email.trim(), password: pass });
+        if (error) throw error;
+        startUser(data.user);
+      } else if (kind === "signup") {
+        if (!email || !pass) return say("Fyll inn e-post og velg et passord (minst 6 tegn).");
+        say("Oppretter bruker …");
+        const { data, error } = await sb.auth.signUp({ email: email.trim(), password: pass, options: { emailRedirectTo: siteUrl() } });
+        if (error) throw error;
+        if (data.session) startUser(data.user);
+        else say("Brukeren er opprettet. Åpne e-posten fra Supabase og trykk på bekreftelseslenken. Kom deretter tilbake hit og logg inn.");
+      } else if (kind === "forgot") {
+        if (!email) return say("Skriv inn e-posten din først.");
+        const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: siteUrl() });
+        if (error) throw error;
+        say("Sjekk e-posten din. Trykk på lenken der for å velge et nytt passord.");
+      } else if (kind === "setpass") {
+        const np = ($("#l-newpass") || {}).value;
+        if (!np || np.length < 6) return say("Passordet må ha minst 6 tegn.");
+        const { data, error } = await sb.auth.updateUser({ password: np });
+        if (error) throw error;
+        toast("Nytt passord er lagret");
+        startUser(data.user);
+      }
+    } catch (e) { say(authMsg(e)); }
+  }
+  async function logout() {
+    if (pending.size && sb && navigator.onLine) await syncNow();
+    if (sb) { try { await sb.auth.signOut(); } catch (e) {} }
+    sbUser = null; prefix = "jobbkort."; S.jobs = {}; S.orders = []; pending.clear();
+    lsSet("jobbkort.lastUser", "");
+    S.view = "login"; render();
+  }
+
   async function init() {
+    loadKat();
+    if (CLOUD) return initCloud();
     loadLocal();
     const imported = migrateOld();
     saveLocal();
-    loadKat();
     S.mode = "loading";
     render();
     if (imported) toast(imported + (imported === 1 ? " jobb" : " jobber") + " hentet fra den gamle appen");
@@ -609,7 +787,9 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
   function render() {
     const app = $("#app");
     const y = window.scrollY;
-    if (S.view === "job" && S.jobs[S.jobId]) app.innerHTML = jobView(S.jobs[S.jobId]);
+    if (S.view === "boot") app.innerHTML = header("", "Starter …", "") + `<main><div class="empty"><p>Henter jobbene dine …</p></div></main>`;
+    else if (S.view === "login" || S.view === "newpass") app.innerHTML = loginView(S.view === "newpass");
+    else if (S.view === "job" && S.jobs[S.jobId]) app.innerHTML = jobView(S.jobs[S.jobId]);
     else if (S.view === "settings") app.innerHTML = settingsView();
     else { S.view = "list"; app.innerHTML = S.home === "orders" ? ordersView() : listView(); }
     setSave(S.saveState);
@@ -821,15 +1001,30 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
     return "mailto:" + encodeURIComponent(to).replace(/%40/g, "@") + "?subject=" + encodeURIComponent(mailSubject(j)) + "&body=" + encodeURIComponent(summaryText(j));
   }
 
+  function loginView(newpass) {
+    const body = newpass
+      ? `<form class="panel" id="form-newpass"><h2>Velg nytt passord</h2><div class="form">${fieldHtml({ k: "newpass", l: "Nytt passord (minst 6 tegn)", w: 4, type: "password" }, "", "l-")}</div>
+         <div class="row"><button class="btn primary" type="submit">Lagre passord</button></div><p class="hint" id="l-msg" aria-live="polite"></p></form>`
+      : `<form class="panel" id="form-login"><h2>Logg inn</h2>
+         <p class="hint">Jobbene dine lagres på kontoen din og synkes mellom telefon og PC. Hver bruker ser bare sine egne jobber.</p>
+         <div class="form">${fieldHtml({ k: "email", l: "E-post", w: 4, type: "email" }, lsGet("jobbkort.lastEmail") || "", "l-")}${fieldHtml({ k: "pass", l: "Passord", w: 4, type: "password" }, "", "l-")}</div>
+         <div class="row"><button class="btn primary" type="submit">Logg inn</button><button class="btn" type="button" data-a="signup">Opprett ny bruker</button><button class="btn ghost" type="button" data-a="forgot">Glemt passord?</button></div>
+         <p class="hint" id="l-msg" aria-live="polite"></p></form>`;
+    return header("", "Tess Mobilservice", "") + `<main>${body}</main>`;
+  }
+
   function settingsView() {
+    const account = sbUser ? `<section class="panel"><span class="label">Konto</span><p class="hint">Logget inn som <strong>${esc(sbUser.email || "")}</strong>. ${pending.size ? pending.size + " endringer venter på å bli synket." : "Alt er synket."}</p>
+      <div class="row"><button class="btn" data-a="syncnow">Synk nå</button><button class="btn ghost" data-a="logout">Logg ut</button></div></section>` : "";
     const kat = KAT.state === "ready" ? KAT.list.length.toLocaleString("nb-NO") + " varer i katalogen." : KAT.state === "failed" ? "Fant ikke varekatalogen (varekatalog.json)." : "Henter varekatalogen …";
     return header("Innstillinger", "Tess Mobilservice", `<button class="iconbtn" data-a="back">‹ Tilbake</button>`) +
       `<main><section class="panel"><h2>Standardverdier</h2><div class="form">
       ${fieldHtml({ k: "email", l: "Standard e-post for rapport", w: 4, type: "email", ph: "ordre@firma.no" }, S.settings.email, "set-")}
       ${fieldHtml({ k: "tech", l: "Ditt navn (forslag på timer)", w: 4 }, S.settings.tech, "set-")}</div>
       <p class="hint">Brukes som forslag i nye jobber.</p></section>
+      ${account}
       <section class="panel"><span class="label">Varekatalog</span><p class="hint">${kat}</p></section>
-      <section class="panel"><span class="label">Lagring</span><p class="hint">${S.mode === "db" ? "Jobbene lagres privat på claude.ai-kontoen din. Bare du ser dem, også om du deler lenken til appen." : "Jobbene lagres i nettleseren på denne enheten. De synkes ikke til andre enheter, og de forsvinner hvis du sletter nettstedsdata for appen."}</p></section></main>`;
+      <section class="panel"><span class="label">Lagring</span><p class="hint">${S.mode === "db" ? "Jobbene lagres privat på claude.ai-kontoen din. Bare du ser dem, også om du deler lenken til appen." : S.mode === "cloud" ? "Jobbene lagres på denne enheten og synkes til kontoen din når du er på nett. Uten nett kan du jobbe som vanlig; endringene sendes når du får dekning igjen." : "Jobbene lagres i nettleseren på denne enheten. De synkes ikke til andre enheter, og de forsvinner hvis du sletter nettstedsdata for appen."}</p></section></main>`;
   }
 
   // ---------- catalogue dropdown ----------
@@ -898,6 +1093,10 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
     const a = b.dataset.a, j = S.jobs[S.jobId];
     if (a !== "deljob" && a !== "delrow" && a !== "odel" && S.armed) { S.armed = null; }
     switch (a) {
+      case "signup": authAction("signup"); break;
+      case "forgot": authAction("forgot"); break;
+      case "logout": logout(); break;
+      case "syncnow": await syncNow(); S.keepScroll = true; render(); break;
       case "new": S.home = "jobs"; newJob(false); break;
       case "example": newJob(true); break;
       case "open": S.view = "job"; S.jobId = b.dataset.id; S.tab = "info"; S.edit = null; render(); window.scrollTo(0, 0); break;
@@ -955,6 +1154,8 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
     e.preventDefault();
     closeAc();
     const form = e.target;
+    if (form.id === "form-login") { lsSet("jobbkort.lastEmail", ($("#l-email").value || "").trim()); authAction("login"); return; }
+    if (form.id === "form-newpass") { authAction("setpass"); return; }
     if (form.id === "form-orders") {
       const o = readForm(form, ORDER_FIELDS);
       if (!o.navn) { toast("Skriv inn vare eller beskrivelse"); $("#o-navn").focus(); return; }
