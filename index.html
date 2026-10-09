@@ -6,13 +6,16 @@
 <meta name="theme-color" content="#2b7a3b">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Jobbkort">
-<title>TESS Jobbkort</title>
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Tess Mobilservice">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<!--PAGE-START-->
+<title>Tess Mobilservice</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100,600;100,700;125,800;125,900&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
-/* Layout: one-column field tool in the green workshop profile. Green header with wordmark, icon tab bar, chevron ground; forms on top, logged rows below as a ledger. */
+/* Layout: one-column field tool in the green workshop profile. Green header with logo, icon tab bar, chevron ground; forms on top, logged rows below as a ledger. */
 :root {
   --bg: #f3f4f0;
   --surface: #ffffff;
@@ -27,29 +30,29 @@
   --accent: #2b7a3b;
   --accent-ink: #ffffff;
   --steel: #3a6d8e;
+  --plum: #6a4a9c;
   --ok: #2b7a3b;
   --warn: #b5650a;
+  --warn-bg: #fdf3e2;
   --danger: #b3261e;
   --chev-op: .075;
   --f-display: "Archivo", "Arial Black", "Helvetica Neue", Arial, sans-serif;
   --f-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
   --r: 10px;
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0f140f; --surface: #182019; --sunk: #131a14; --ink: #e6ebe5; --muted: #9aa79b; --line: #2b372c;
     --brand: #25693a; --brand-deep: #1a4f2a; --tint: #1c3321; --accent: #3d9a51; --accent-ink: #ffffff;
-    --steel: #86b6d6; --ok: #6cc58a; --warn: #f0a24a; --danger: #ff7b72; --chev-op: .05;
+    --steel: #86b6d6; --plum: #b9a0e6; --ok: #6cc58a; --warn: #f0a24a; --warn-bg: #2b2213; --danger: #ff7b72; --chev-op: .05;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0f140f; --surface: #182019; --sunk: #131a14; --ink: #e6ebe5; --muted: #9aa79b; --line: #2b372c;
   --brand: #25693a; --brand-deep: #1a4f2a; --tint: #1c3321; --accent: #3d9a51; --accent-ink: #ffffff;
-  --steel: #86b6d6; --ok: #6cc58a; --warn: #f0a24a; --danger: #ff7b72; --chev-op: .05;
+  --steel: #86b6d6; --plum: #b9a0e6; --ok: #6cc58a; --warn: #f0a24a; --warn-bg: #2b2213; --danger: #ff7b72; --chev-op: .05;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -65,12 +68,13 @@ h1, h2, h3 { font-family: var(--f-display); font-weight: 700; margin: 0; text-wr
 .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--brand); color: var(--on-brand); }
 .top-in { max-width: 760px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; min-height: 72px; }
 .top h1 { font-size: 22px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.top .sub { font-size: 13px; opacity: .85; }
+.top .sub { font-size: 13px; opacity: .85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wm { display: grid; line-height: 1; flex: none; }
+.wm-logo { height: 40px; width: auto; filter: brightness(0) invert(1); display: block; }
 .wm-a { font: 900 34px/0.9 var(--f-display); font-stretch: 125%; letter-spacing: -.01em; }
 .wm-b { font: 600 10.5px var(--f-display); font-stretch: 125%; letter-spacing: .02em; margin-top: 4px; }
-.top-right { margin-left: auto; text-align: right; display: grid; gap: 2px; justify-items: end; min-width: 0; }
-.top-right .sub { font-size: 15px; opacity: .9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.top-right { margin-left: auto; text-align: right; display: grid; gap: 4px; justify-items: end; min-width: 0; }
+.top-right .sub { font-size: 15px; opacity: .9; max-width: 100%; }
 .iconbtn { background: transparent; border: 1px solid color-mix(in srgb, var(--on-brand) 45%, transparent); color: var(--on-brand); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 600; white-space: nowrap; }
 .savestate { font-size: 12px; opacity: .8; white-space: nowrap; }
 .savestate.err { color: #ffd88a; opacity: 1; }
@@ -83,7 +87,7 @@ h1, h2, h3 { font-family: var(--f-display); font-weight: 700; margin: 0; text-wr
 .tab .c { position: absolute; top: 4px; left: calc(50% + 10px); font: 500 11px/1 var(--f-mono); background: var(--tint); color: var(--brand); border-radius: 999px; padding: 3px 5px; }
 
 main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16px 64px; display: grid; gap: 16px; }
-.banner { background: color-mix(in srgb, var(--warn) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); border-radius: var(--r); padding: 10px 14px; font-size: 14px; }
+.banner { background: var(--warn-bg); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); border-radius: var(--r); padding: 10px 14px; font-size: 14px; }
 
 .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; color: var(--ink); }
 .btn.primary { background: var(--accent); border-color: var(--brand-deep); color: var(--accent-ink); }
@@ -92,7 +96,7 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
 .btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); background: transparent; }
 .btn.danger.armed { background: var(--danger); color: #fff; }
 .btn.sm { min-height: 34px; padding: 4px 10px; font-size: 14px; }
-.btn:focus-visible, .tab:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .jobcard:focus-visible { outline: 3px solid var(--steel); outline-offset: 2px; }
+.btn:focus-visible, .tab:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .jobcard:focus-visible, .ac-i:focus-visible { outline: 3px solid var(--steel); outline-offset: 2px; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .grow { flex: 1; min-width: 0; }
 
@@ -101,7 +105,7 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
 .label { font: 600 12px var(--f-body); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
 
 .form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 10px; }
-.fld { display: grid; gap: 4px; min-width: 0; }
+.fld { display: grid; gap: 4px; min-width: 0; position: relative; }
 .fld.w1 { grid-column: span 1; } .fld.w2 { grid-column: span 2; } .fld.w3 { grid-column: span 3; } .fld.w4 { grid-column: span 4; }
 .fld label { font: 600 13px var(--f-body); color: var(--muted); }
 .fld input, .fld select, .fld textarea { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--sunk); border-radius: 8px; padding: 10px 10px; min-height: 44px; }
@@ -112,6 +116,14 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
   .fld.w3, .fld.w4 { grid-column: span 2; }
   .fld.w2.wide-m { grid-column: span 2; }
 }
+
+/* Catalogue suggestions */
+.ac { position: absolute; left: 0; right: 0; top: 100%; z-index: 8; background: var(--surface); border: 1px solid var(--steel); border-radius: 0 0 8px 8px; max-height: 260px; overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,.14); }
+.ac-i { display: grid; grid-template-columns: auto 1fr; gap: 10px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 10px 12px; cursor: pointer; align-items: baseline; }
+.ac-i:hover { background: var(--tint); }
+.ac-i b { font: 500 14px var(--f-mono); }
+.ac-i span { font-size: 13px; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-i.used b { color: var(--brand); }
 
 /* Job list */
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -124,14 +136,19 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
 .joblist { display: grid; gap: 10px; }
 .jobcard { display: grid; grid-template-columns: 6px 1fr auto; gap: 0 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 14px 14px 0; cursor: pointer; text-align: left; width: 100%; overflow: hidden; }
 .jobcard .stripe { grid-row: 1 / span 3; border-radius: 0 4px 4px 0; background: var(--steel); }
-.jobcard.ferdig .stripe { background: var(--accent); }
+.jobcard.ferdig .stripe { background: var(--warn); }
 .jobcard.sendt .stripe { background: var(--ok); }
 .jobcard .jt { display: block; font: 700 20px/1.2 var(--f-display); min-width: 0; overflow-wrap: anywhere; }
 .jobcard .meta { display: block; color: var(--muted); font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
-.jobcard .stats { grid-column: 2 / span 2; display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.jobcard .stats { grid-column: 2 / span 2; display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 13px; color: var(--muted); align-items: center; }
 .jobcard .stats b { color: var(--ink); font-weight: 500; }
-.pill { font: 600 11px var(--f-body); letter-spacing: .08em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; align-self: start; white-space: nowrap; border: 1px solid currentColor; }
+.pill { font: 600 11px var(--f-body); letter-spacing: .08em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; align-self: start; white-space: nowrap; border: 1px solid currentColor; background: transparent; }
 .pill.aktiv { color: var(--steel); } .pill.ferdig { color: var(--warn); } .pill.sendt { color: var(--ok); }
+.pill.venter { color: var(--warn); } .pill.bestilt { color: var(--steel); } .pill.mottatt { color: var(--ok); }
+button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
+.tb { font: 600 12px var(--f-body); padding: 2px 8px; border-radius: 4px; background: var(--tint); color: var(--brand); }
+.tb.butikk { background: color-mix(in srgb, var(--plum) 14%, transparent); color: var(--plum); }
+.tb.verksted { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
 
 .empty { text-align: center; padding: 40px 16px; display: grid; gap: 12px; justify-items: center; color: var(--muted); }
 .empty h2 { color: var(--ink); font-size: 26px; }
@@ -141,12 +158,16 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
 .ledger { display: grid; gap: 0; border-top: 1px solid var(--line); }
 .lrow { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: start; }
 .lrow.editing { background: color-mix(in srgb, var(--accent) 12%, transparent); }
-.lrow .tag { font: 500 13px var(--f-mono); background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; min-width: 2.4em; text-align: center; }
+.lrow.done { opacity: .5; }
+.lrow .tag { font: 500 13px var(--f-mono); background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; min-width: 2.4em; text-align: center; white-space: nowrap; }
 .lrow .main { min-width: 0; overflow-wrap: anywhere; }
 .lrow .main strong { font-weight: 600; }
 .lrow .main .d { color: var(--muted); font-size: 14px; }
-.lrow .acts { display: flex; gap: 6px; }
-.lrow .big { font: 500 15px var(--f-mono); white-space: nowrap; }
+.lrow .acts { display: flex; gap: 6px; align-items: center; }
+.kode { font: 500 12px var(--f-mono); background: var(--tint); color: var(--brand); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+.grp { display: flex; align-items: center; gap: 8px; padding-top: 12px; }
+.grp span { font: 700 11px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.grp::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
 .totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .tot { background: var(--sunk); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; }
@@ -155,14 +176,20 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
 .sumtable { width: 100%; border-collapse: collapse; font-size: 14px; }
 .sumtable td { padding: 6px 0; border-bottom: 1px dashed var(--line); }
 .sumtable td:last-child { text-align: right; font-family: var(--f-mono); white-space: nowrap; padding-left: 12px; }
+.otbox { background: var(--warn-bg); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; font-size: 14px; }
+.otbox .label { color: var(--warn); }
+.otbox .ot { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.otbox .ot b { font-variant-numeric: tabular-nums; }
+.otbox .ot span { font: 500 13px var(--f-mono); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); border-radius: 4px; padding: 0 6px; }
+.prev { font: 500 14px var(--f-mono); color: var(--brand); min-height: 1.4em; }
 
 .preview { background: var(--sunk); border: 1px solid var(--line); border-radius: 8px; padding: 14px; font: 500 13px/1.5 var(--f-mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 420px; overflow: auto; }
 .hint { font-size: 14px; color: var(--muted); margin: 0; }
-.statusbar { display: flex; flex-wrap: wrap; gap: 8px; }
 .toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-weight: 600; z-index: 20; max-width: calc(100% - 32px); }
 .ex { font: 600 11px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--warn); }
 @media (prefers-reduced-motion: no-preference) { .jobcard { transition: border-color .15s; } .jobcard:hover { border-color: var(--steel); } }
 </style>
+<!--HEAD-END-->
 </head>
 <body>
 
@@ -173,12 +200,17 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
 (function () {
   "use strict";
 
+  // ---------- config ----------
+  const BRAND = { name: "TESS", tag: "TEKNISK FAGHANDEL", logo: "tess-logo.png" };
+  const STANDALONE = !window.claude;
+
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
   const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
   const fmtDate = (iso) => { if (!iso) return ""; const p = String(iso).split("-"); return p.length === 3 ? p[2] + "." + p[1] + "." + p[0] : iso; };
   const nf = (n, d) => (Math.round((Number(n) || 0) * Math.pow(10, d)) / Math.pow(10, d)).toLocaleString("nb-NO", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const qtyStr = (v) => nf(v, num(v) % 1 ? 2 : 0);
   const num = (v) => { const n = parseFloat(String(v == null ? "" : v).replace(",", ".")); return isFinite(n) ? n : 0; };
   const uid8 = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -187,78 +219,205 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
   let toastT;
   function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 2600); }
 
+  // ---------- time codes (TTM) ----------
+  const parseTime = (s) => { const [h, m] = String(s || "0:0").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
+  const minToStr = (m) => { m = ((m % 1440) + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); };
+  const fmtMin = (m) => { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; if (h && r) return h + "t " + r + "min"; return h ? h + "t" : r + "min"; };
+  const isWeekend = (dato) => { if (!dato) return false; const d = new Date(dato + "T12:00:00").getDay(); return d === 0 || d === 6; };
+  function timekode(fra, dato) {
+    if (isWeekend(dato)) return "TTM-2107";
+    const h = parseInt(String(fra || "07").split(":")[0], 10);
+    if (h >= 21 || h < 7) return "TTM-2107";
+    if (h >= 15) return "TTM-1621";
+    return "TTM-0716";
+  }
+  // Split a time span at the rate boundaries 07:00, 15:00 and 21:00 (whole span on 2107 at weekends).
+  function splittTimer(fra, til, dato) {
+    const fraMin = parseTime(fra);
+    let tilMin = parseTime(til);
+    if (tilMin <= fraMin) tilMin += 1440;
+    if (isWeekend(dato)) return [{ fra, til: minToStr(tilMin), min: tilMin - fraMin, kode: "TTM-2107" }];
+    const grenser = [0, 420, 900, 1260, 1440, 1860, 2340, 2700, 2880];
+    const koder = ["TTM-2107", "TTM-0716", "TTM-1621", "TTM-2107", "TTM-2107", "TTM-0716", "TTM-1621", "TTM-2107"];
+    const deler = [];
+    for (let i = 0; i < koder.length; i++) {
+      const s = Math.max(fraMin, grenser[i]), e = Math.min(tilMin, grenser[i + 1]);
+      if (e > s) {
+        const last = deler[deler.length - 1];
+        if (last && last.kode === koder[i] && parseTime(last.til) === s % 1440) { last.til = minToStr(e); last.min += e - s; }
+        else deler.push({ fra: minToStr(s), til: minToStr(e), min: e - s, kode: koder[i] });
+      }
+    }
+    return deler;
+  }
+  // Overtime to add per date: 50 % 15–18, 100 % 18–07, 100 % all weekend.
+  function beregnOvertid(rows) {
+    const per = {};
+    for (const t of rows) {
+      if (!t.from || !t.to) continue;
+      const dato = t.date || "—";
+      per[dato] = per[dato] || { ot50: 0, ot100: 0 };
+      let fra = parseTime(t.from), til = parseTime(t.to);
+      if (til <= fra) til += 1440;
+      if (isWeekend(t.date)) { per[dato].ot100 += til - fra; continue; }
+      const soner = [{ s: 0, e: 420, t: "ot100" }, { s: 900, e: 1080, t: "ot50" }, { s: 1080, e: 1860, t: "ot100" }];
+      for (const z of soner) { const a = Math.max(fra, z.s), b = Math.min(til, z.e); if (b > a) per[dato][z.t] += b - a; }
+    }
+    for (const k of Object.keys(per)) if (!per[k].ot50 && !per[k].ot100) delete per[k];
+    return per;
+  }
+  const rowMin = (r) => (r.min != null ? num(r.min) : Math.round(num(r.h) * 60));
+  const rowKode = (r) => r.kode || (r.from ? timekode(r.from, r.date) : r.kind || "TTM-0716");
+
+  // ---------- product catalogue ----------
+  const KAT = { list: [], byNr: {}, state: "idle" };
+  function loadKat() {
+    if (KAT.state !== "idle") return;
+    KAT.state = "loading";
+    fetch("varekatalog.json").then((r) => (r.ok ? r.json() : [])).then((d) => {
+      if (Array.isArray(d)) { KAT.list = d; for (const v of d) KAT.byNr[String(v.nr).toUpperCase()] = v.navn; }
+      KAT.state = "ready";
+    }).catch(() => { KAT.state = "failed"; });
+  }
+  const katName = (nr) => (nr ? KAT.byNr[String(nr).trim().toUpperCase()] || "" : "");
+  function katSearch(q, max) {
+    const ql = q.toLowerCase(), first = [], rest = [];
+    for (const v of KAT.list) {
+      const nr = String(v.nr).toLowerCase();
+      if (nr.startsWith(ql)) { first.push(v); if (first.length >= max) break; }
+      else if (rest.length < max && (nr.includes(ql) || String(v.navn).toLowerCase().includes(ql))) rest.push(v);
+    }
+    return first.concat(rest).slice(0, max);
+  }
+  function klassifiser(navn) {
+    const n = String(navn || "").trim().toUpperCase();
+    const bm = n.match(/^([A-Z]{2})\d/);
+    if (bm) return { gruppe: bm[1], label: bm[1] };
+    if (/^\d{4}-\d{2,3}-\d{2}$/.test(n)) return { gruppe: "innsats", label: "Innsats" };
+    if (/^65\d{3}-/.test(n)) return { gruppe: "hylse", label: "Hylse" };
+    if (/^7\d{3}-/.test(n)) return { gruppe: "ansats", label: "Ansats" };
+    if (/^\d{4}-\d{2}$/.test(n)) return { gruppe: "slange", label: "Slange" };
+    return { gruppe: "annet", label: "Annet" };
+  }
+  const gOrder = ["slange", "hylse", "innsats", "ansats"];
+  const gRank = (g) => { const i = gOrder.indexOf(g); return i < 0 ? (g === "annet" ? 999 : 99) : i; };
+  const itemName = (r) => r.desc || katName(r.nr) || r.nr || "";
+  function groupItems(items) {
+    const rows = (items || []).map((r, i) => Object.assign({ r, i }, klassifiser(r.nr || r.desc)));
+    rows.sort((a, b) => gRank(a.gruppe) - gRank(b.gruppe) || String(a.r.nr || a.r.desc).localeCompare(String(b.r.nr || b.r.desc)));
+    const groups = [];
+    for (const x of rows) { let g = groups[groups.length - 1]; if (!g || g.gruppe !== x.gruppe) { g = { gruppe: x.gruppe, label: x.label, rows: [] }; groups.push(g); } g.rows.push(x); }
+    return groups;
+  }
+
   // ---------- module definitions ----------
-  const HOURTYPES = ["Normal", "Overtid 50%", "Overtid 100%", "Reisetid"];
-  const UNITS = ["stk", "m", "l", "kg", "sett", "pk"];
+  const UNITS = ["stk", "m", "dm", "liter", "kg", "sett", "pose", "pk"];
+  const ORDER_UNITS = ["stk", "m", "rull", "eske", "sett", "liter"];
+  const JTYPES = { felt: "Felt", butikk: "Butikk", verksted: "Verksted" };
   const MODS = {
     hoses: {
       title: "Slanger", add: "Legg til slange",
       fields: [
         { k: "pos", l: "Pos.", w: 1, ph: "1" },
         { k: "sted", l: "Sted / system", w: 3, ph: "F.eks. kran, hovedsylinder", list: true },
-        { k: "type", l: "Slangetype", w: 2, ph: '1/2" 2SN', list: true, req: true, cls: "wide-m" },
+        { k: "type", l: "Slangetype", w: 2, ph: "5256-06", cat: true, req: true, cls: "wide-m" },
         { k: "len", l: "Lengde (mm)", w: 1, num: true, req: true },
         { k: "qty", l: "Antall", w: 1, num: true, def: "1" },
-        { k: "e1", l: "Ende 1 (innsats)", w: 2, ph: "DKOL M22", list: true, lsrc: ["e1", "e2"] },
-        { k: "e2", l: "Ende 2 (innsats)", w: 2, ph: "DKOL 90° M22", list: true, lsrc: ["e1", "e2"] },
-        { k: "hylse", l: "Hylse", w: 2, list: true },
+        { k: "e1", l: "Ende 1 (innsats)", w: 2, cat: true, lsrc: ["e1", "e2"] },
+        { k: "e2", l: "Ende 2 (innsats)", w: 2, cat: true, lsrc: ["e1", "e2"] },
+        { k: "hylse", l: "Hylse", w: 2, ph: "65125-06", cat: true },
         { k: "bar", l: "Trykk (bar)", w: 2, num: true },
         { k: "note", l: "Merknad", w: 4 }
       ],
       keep: ["sted", "type", "hylse", "bar"]
     },
     items: {
-      title: "Varer", add: "Legg til vare",
+      title: "Materiell", add: "Legg til vare",
       fields: [
-        { k: "nr", l: "Varenr.", w: 1, list: true },
-        { k: "desc", l: "Beskrivelse", w: 3, req: true, list: true },
+        { k: "nr", l: "Varenr.", w: 2, ph: "5256-06, 65125-06 …", cat: true, cls: "wide-m" },
+        { k: "desc", l: "Beskrivelse", w: 2, list: true, cls: "wide-m" },
         { k: "qty", l: "Antall", w: 2, num: true, def: "1", req: true },
-        { k: "unit", l: "Enhet", w: 2, opts: UNITS }
+        { k: "unit", l: "Enhet", w: 2, opts: UNITS },
+        { k: "note", l: "Kommentar", w: 4, ph: "Posisjon, farge, ekstra info …" }
       ],
       keep: ["unit"]
     },
     hours: {
-      title: "Timer", add: "Registrer timer",
+      title: "Timer", add: "Registrer tid",
       fields: [
+        { k: "from", l: "Fra", w: 1, type: "time", req: true },
+        { k: "to", l: "Til", w: 1, type: "time", req: true },
         { k: "date", l: "Dato", w: 2, type: "date", def: today },
         { k: "tech", l: "Tekniker", w: 2, list: true, def: () => S.settings.tech || "" },
-        { k: "from", l: "Fra", w: 1, type: "time" },
-        { k: "to", l: "Til", w: 1, type: "time" },
-        { k: "h", l: "Timer", w: 2, num: true, req: true },
-        { k: "kind", l: "Type", w: 2, opts: HOURTYPES, cls: "wide-m" },
-        { k: "desc", l: "Arbeid utført", w: 2, cls: "wide-m" }
+        { k: "desc", l: "Hva ble gjort", w: 2, cls: "wide-m" }
       ],
-      keep: ["date", "tech", "kind"]
+      keep: ["date", "tech"]
     }
   };
-  const BRAND = { name: "TESS", tag: "TEKNISK FAGHANDEL" };
-  const STANDALONE = !window.claude;
+  const ORDER_FIELDS = [
+    { k: "navn", l: "Vare / beskrivelse", w: 4, cat: true, req: true, ph: "Parker R2T-10, 5256-06 …" },
+    { k: "antall", l: "Antall", w: 1, num: true, def: "1" },
+    { k: "enhet", l: "Enhet", w: 1, opts: ORDER_UNITS },
+    { k: "lev", l: "Leverandør", w: 2, ph: "Parker, Stauff, Alfagomma …" },
+    { k: "merk", l: "Merknad", w: 4, ph: "Hastegrad, hvilken jobb …" }
+  ];
+  const ORDER_STATUS = { venter: "Venter", bestilt: "Bestilt", mottatt: "Mottatt" };
+  const NEXT_STATUS = { venter: "bestilt", bestilt: "mottatt", mottatt: "venter" };
+
   const ico = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
   const ICONS = {
+    jobs: ico('<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 10h.01M12 10h4M9 14h.01M12 14h4"/>'),
     info: ico('<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 10h.01M12 10h4M9 14h.01M12 14h4"/>'),
     hoses: ico('<path d="M4 20c0-6 4-8 8-8s8-2 8-8"/><rect x="2.5" y="18" width="3" height="4" rx=".5"/><rect x="18.5" y="2" width="3" height="4" rx=".5"/>'),
     items: ico('<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>'),
     hours: ico('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
-    notes: ico('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>'),
-    send: ico('<path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>')
+    notes: ico('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>'),
+    send: ico('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>'),
+    orders: ico('<circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/><path d="M2.5 3.5h3l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L21 8H6.3"/>')
   };
-  const TABS = [["info", "Jobb"], ["hoses", "Slanger"], ["items", "Varer"], ["hours", "Timer"], ["notes", "Notater"], ["send", "Send"]];
+  const TABS = [["info", "Jobb"], ["hoses", "Slanger"], ["items", "Varer"], ["hours", "Timer"], ["notes", "Notater"], ["send", "Rapport"]];
   const STATUS = { aktiv: "Pågår", ferdig: "Ferdig", sendt: "Sendt" };
 
   // ---------- state ----------
-  const S = { jobs: {}, settings: { type: "settings", email: "", tech: "" }, view: "list", jobId: null, tab: "info", filter: "aktive", q: "", edit: null, mode: "loading", saveState: "", armed: null };
+  const S = { jobs: {}, orders: [], settings: { type: "settings", email: "", tech: "" }, view: "list", home: "jobs", jobId: null, tab: "info", filter: "aktive", tfilter: "alle", ofilter: "alle", q: "", edit: null, mode: "loading", saveState: "", armed: null };
   let col = null, downloads = null;
   const dirty = new Set(), timers = {}, inflight = {}, again = {};
 
   // ---------- storage ----------
   function saveLocal() {
     lsSet("jobbkort.jobs", JSON.stringify(S.jobs));
+    lsSet("jobbkort.orders", JSON.stringify(S.orders));
     lsSet("jobbkort.settings", JSON.stringify(S.settings));
   }
   function loadLocal() {
     try { const j = JSON.parse(lsGet("jobbkort.jobs") || "{}"); if (j && typeof j === "object") S.jobs = j; } catch (e) {}
+    try { const o = JSON.parse(lsGet("jobbkort.orders") || "[]"); if (Array.isArray(o)) S.orders = o; } catch (e) {}
     try { const s = JSON.parse(lsGet("jobbkort.settings") || "null"); if (s) S.settings = Object.assign(S.settings, s); } catch (e) {}
   }
+  // One-time import from the earlier Tess Mobilservice app (same site, key tess_v4). The old data is left in place.
+  function migrateOld() {
+    if (lsGet("jobbkort.migrated.v4")) return 0;
+    let old = null;
+    try { old = JSON.parse(lsGet("tess_v4") || "null"); } catch (e) {}
+    lsSet("jobbkort.migrated.v4", "1");
+    if (!old) return 0;
+    let n = 0;
+    for (const o of old.jobber || []) {
+      const id = "job-v4-" + o.id;
+      if (S.jobs[id]) continue;
+      S.jobs[id] = {
+        type: "job", id, jtype: o.type || "felt", kunde: o.kunde || "", beskrivelse: o.navn || "", ordrenr: o.ordrenr || "", ref: o.kref || "",
+        sted: o.lokasjon || "", kontakt: "", dato: o.dato || "", utfort: "", status: "aktiv", hoses: [], notes: "",
+        items: (o.varer || []).map((v) => { const code = /^[A-Z0-9][A-Z0-9\-\/.]*$/i.test(String(v.navn || "").trim()); return { nr: code ? v.navn : "", desc: code ? "" : v.navn, qty: String(v.antall || 1), unit: v.enhet || "stk", note: v.komm || "" }; }),
+        hours: (o.timer || []).map((t) => ({ date: t.dato || "", from: t.fra, to: t.til, min: t.min, kode: t.kode || timekode(t.fra, t.dato), tech: "", desc: t.komm || "" })),
+        created: typeof o.id === "number" ? o.id : Date.now(), updated: typeof o.id === "number" ? o.id : Date.now()
+      };
+      n++;
+    }
+    for (const b of old.bestillinger || []) S.orders.push({ id: "o-v4-" + b.id, navn: b.navn || "", antall: String(b.antall || 1), enhet: b.enhet || "stk", lev: b.lev || "", merk: b.merk || "", status: b.status || "venter" });
+    return n;
+  }
+  let gotOrders = false;
   function ingest(docs, changes) {
     let touchedOpen = false;
     for (const d of docs) {
@@ -266,6 +425,7 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
       const v = d.data();
       if (!v) continue;
       if (v.type === "settings") { if (!dirty.has("settings")) S.settings = Object.assign({}, S.settings, clone(v)); continue; }
+      if (v.type === "orders") { gotOrders = true; if (!dirty.has("orders")) S.orders = clone(v.list || []); continue; }
       if (v.type !== "job") continue;
       const cur = S.jobs[d.id];
       if (dirty.has(d.id)) continue;
@@ -289,12 +449,17 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
     timers[id] = setTimeout(() => flush(id), 500);
     setSave("saving");
   }
+  function docBody(id) {
+    if (id === "settings") return S.settings;
+    if (id === "orders") return { type: "orders", list: S.orders };
+    return S.jobs[id];
+  }
   async function flush(id) {
     if (inflight[id]) { again[id] = true; return; }
     inflight[id] = true;
     try {
       if (col) {
-        const body = id === "settings" ? S.settings : S.jobs[id];
+        const body = docBody(id);
         if (body) await col.doc(id).set(clone(body)); else await col.doc(id).delete();
       }
       saveLocal();
@@ -311,8 +476,12 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
 
   async function init() {
     loadLocal();
+    const imported = migrateOld();
+    saveLocal();
+    loadKat();
     S.mode = "loading";
     render();
+    if (imported) toast(imported + (imported === 1 ? " jobb" : " jobber") + " hentet fra den gamle appen");
     let db = null, user = null;
     try {
       if (window.claude && window.claude.use) {
@@ -325,15 +494,16 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
       try {
         col = db.collection("data/users/" + id);
         const snap = await col.get();
-        const localJobs = S.jobs;
-        S.jobs = {};
+        const localJobs = S.jobs, localOrders = S.orders;
+        S.jobs = {}; S.orders = [];
         ingest(snap.docs);
         S.mode = "db";
-        // First run on the account: move jobs kept in this browser up to the account.
+        // First run on the account: move what this browser holds up to the account.
         if (!Object.keys(S.jobs).length) for (const [k, v] of Object.entries(localJobs)) if (v && v.type === "job") { S.jobs[k] = v; touch(k); }
+        if (!gotOrders && localOrders.length) { S.orders = localOrders; touch("orders"); }
         col.onSnapshot((s) => {
           const hit = ingest(s.docs, s.docChanges());
-          if (S.view === "list" || (hit && !isTyping())) render();
+          if (S.view === "list" ? !isTyping() : hit && !isTyping()) render();
         }, () => {});
       } catch (e) { col = null; S.mode = "local"; }
     } else S.mode = "local";
@@ -359,36 +529,41 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
   }
   function hourSums(job) {
     const by = {}; let tot = 0;
-    for (const r of job.hours || []) { const k = r.kind || "Normal"; by[k] = (by[k] || 0) + num(r.h); tot += num(r.h); }
+    for (const r of job.hours || []) { const k = rowKode(r), m = rowMin(r); by[k] = (by[k] || 0) + m; tot += m; }
     return { by, tot };
   }
-  function suggestions(field) {
+  function suggestions(mod, keys) {
     const set = new Set();
-    for (const j of Object.values(S.jobs)) for (const m of ["hoses", "items", "hours"]) for (const r of j[m] || []) for (const f of field.lsrc || [field.k]) if (r[f] && m === field.mod) set.add(r[f]);
-    return [...set].slice(0, 60);
+    for (const j of Object.values(S.jobs)) for (const r of (j && j[mod]) || []) for (const f of keys) if (r[f]) set.add(r[f]);
+    return [...set];
   }
+  const withName = (code) => { const n = katName(code); return n ? code + " " + n : code; };
 
   function summaryText(job) {
     const L = [];
     const line = (s) => L.push(s);
     const hr = () => line("");
-    line("JOBBRAPPORT – " + (job.kunde || "Uten kunde"));
+    line(`[${(JTYPES[job.jtype || "felt"] || "Felt").toUpperCase()}] ${job.beskrivelse || "Jobb"}`);
     line("=".repeat(40));
     line("Kunde:          " + (job.kunde || ""));
+    if (job.sted) line("Lokasjon:       " + job.sted);
     if (job.kontakt) line("Kontaktperson:  " + job.kontakt);
-    if (job.sted) line("Sted / fartøy:  " + job.sted);
+    if (job.ordrenr) line("Ordrenr.:       " + job.ordrenr);
     if (job.ref) line("Kundens ref/PO: " + job.ref);
     line("Dato:           " + fmtDate(job.dato));
     if (job.utfort) line("Utført av:      " + job.utfort);
-    line("Status:         " + STATUS[job.status || "aktiv"]);
-    if (job.beskrivelse) { hr(); line("OPPDRAG"); line(job.beskrivelse); }
 
     const hs = hourSums(job);
     if ((job.hours || []).length) {
-      hr(); line("TIMER");
-      for (const r of job.hours) line(`${fmtDate(r.date)}  ${r.from && r.to ? r.from + "–" + r.to + "  " : ""}${nf(r.h, 1)} t  ${r.kind || "Normal"}${r.tech ? "  " + r.tech : ""}${r.desc ? "  – " + r.desc : ""}`);
-      for (const [k, v] of Object.entries(hs.by)) line(`  Sum ${k}: ${nf(v, 1)} t`);
-      line(`  Totalt: ${nf(hs.tot, 1)} t`);
+      hr(); line("TIMER TOTALT: " + fmtMin(hs.tot));
+      const sorted = (job.hours || []).slice().sort((a, b) => String(a.date + a.from).localeCompare(String(b.date + b.from)));
+      for (const r of sorted) line(`  ${fmtDate(r.date)}  ${r.from && r.to ? r.from + "–" + r.to + "  " : ""}(${fmtMin(rowMin(r))})  ${rowKode(r)}${r.tech ? "  " + r.tech : ""}${r.desc ? "  – " + r.desc : ""}`);
+      for (const [k, v] of Object.entries(hs.by)) line(`  Sum ${k}: ${fmtMin(v)}`);
+      const ot = beregnOvertid(job.hours || []);
+      if (Object.keys(ot).length) {
+        hr(); line("OVERTID:");
+        for (const [d, v] of Object.entries(ot)) line(`  ${fmtDate(d)}${v.ot50 ? "  50%: " + fmtMin(v.ot50) : ""}${v.ot100 ? "  100%: " + fmtMin(v.ot100) : ""}`);
+      }
     }
     const s = hoseSums(job);
     if ((job.hoses || []).length) {
@@ -404,26 +579,29 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
         line(parts.join(" | "));
       }
       line("Sum per slangetype:");
-      for (const [t, v] of Object.entries(s.byType)) line(`  ${t}: ${v.n} stk, ${nf(v.mm / 1000, 2)} m`);
-      if (Object.keys(s.ends).length) { line("Innsatser / endekoblinger:"); for (const [t, n] of Object.entries(s.ends)) line(`  ${t}: ${n} stk`); }
-      if (Object.keys(s.ferr).length) { line("Hylser:"); for (const [t, n] of Object.entries(s.ferr)) line(`  ${t}: ${n} stk`); }
+      for (const [t, v] of Object.entries(s.byType)) line(`  ${withName(t)}: ${v.n} stk, ${nf(v.mm / 1000, 2)} m`);
+      if (Object.keys(s.ends).length) { line("Innsatser:"); for (const [t, n] of Object.entries(s.ends)) line(`  ${withName(t)}: ${n} stk`); }
+      if (Object.keys(s.ferr).length) { line("Hylser:"); for (const [t, n] of Object.entries(s.ferr)) line(`  ${withName(t)}: ${n} stk`); }
     }
     if ((job.items || []).length) {
-      hr(); line("VARER");
-      for (const r of job.items) line(`${r.nr ? r.nr + "  " : ""}${r.desc}  –  ${nf(r.qty, num(r.qty) % 1 ? 2 : 0)} ${r.unit || "stk"}`);
+      hr(); line("MATERIELL:");
+      for (const g of groupItems(job.items)) {
+        line(`  [${g.label.toUpperCase()}]`);
+        for (const { r } of g.rows) line(`  ${qtyStr(r.qty)} ${r.unit || "stk"}  ${[r.nr, r.desc || katName(r.nr)].filter(Boolean).join("  ")}${r.note ? " (" + r.note + ")" : ""}`);
+      }
     }
     if (job.notes) { hr(); line("NOTATER / AVVIK"); line(job.notes); }
     return L.join("\n");
   }
   function csvText(job) {
     const q = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-    const rows = [["Kategori", "Varenr/type", "Beskrivelse", "Antall", "Enhet"]];
+    const rows = [["Kategori", "Varenr", "Beskrivelse", "Antall", "Enhet", "Kommentar"]];
     const s = hoseSums(job);
-    for (const [t, v] of Object.entries(s.byType)) rows.push(["Slange", t, "Slange " + t, nf(v.mm / 1000, 2), "m"]);
-    for (const [t, n] of Object.entries(s.ends)) rows.push(["Innsats", t, "Innsats / endekobling", n, "stk"]);
-    for (const [t, n] of Object.entries(s.ferr)) rows.push(["Hylse", t, "Hylse", n, "stk"]);
-    for (const r of job.items || []) rows.push(["Vare", r.nr || "", r.desc, nf(r.qty, num(r.qty) % 1 ? 2 : 0), r.unit || "stk"]);
-    for (const [k, v] of Object.entries(hourSums(job).by)) rows.push(["Timer", k, "Arbeid " + k, nf(v, 1), "t"]);
+    for (const [t, v] of Object.entries(s.byType)) rows.push(["Slange", t, katName(t) || "Slange", nf(v.mm / 1000, 2), "m", ""]);
+    for (const [t, n] of Object.entries(s.ferr)) rows.push(["Hylse", t, katName(t) || "Hylse", n, "stk", ""]);
+    for (const [t, n] of Object.entries(s.ends)) rows.push(["Innsats", t, katName(t) || "Innsats", n, "stk", ""]);
+    for (const g of groupItems(job.items)) for (const { r } of g.rows) rows.push([g.label, r.nr || "", r.desc || katName(r.nr), qtyStr(r.qty), r.unit || "stk", r.note || ""]);
+    for (const [k, v] of Object.entries(hourSums(job).by)) rows.push(["Timer", k, "Arbeid " + k, nf(v / 60, 2), "t", ""]);
     return "﻿" + rows.map((r) => r.map(q).join(";")).join("\r\n");
   }
 
@@ -433,15 +611,28 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
     const y = window.scrollY;
     if (S.view === "job" && S.jobs[S.jobId]) app.innerHTML = jobView(S.jobs[S.jobId]);
     else if (S.view === "settings") app.innerHTML = settingsView();
-    else { S.view = "list"; app.innerHTML = listView(); }
+    else { S.view = "list"; app.innerHTML = S.home === "orders" ? ordersView() : listView(); }
     setSave(S.saveState);
     if (S.keepScroll) window.scrollTo(0, y);
     S.keepScroll = false;
   }
 
+  function wordmark() {
+    const text = `<span class="wm-text"${BRAND.logo ? " hidden" : ""}><span class="wm-a">${esc(BRAND.name)}</span><br><span class="wm-b">${esc(BRAND.tag)}</span></span>`;
+    const img = BRAND.logo ? `<img class="wm-logo" src="${esc(BRAND.logo)}" alt="${esc(BRAND.name)}" onerror="this.hidden=true;this.nextElementSibling.hidden=false">` : "";
+    return `<div class="wm">${img}${text}</div>`;
+  }
   function header(title, sub, left, right) {
-    if (!left) return `<header class="top"><div class="top-in"><div class="wm" role="img" aria-label="${esc(BRAND.name)}"><span class="wm-a">${esc(BRAND.name)}</span><span class="wm-b">${esc(BRAND.tag)}</span></div><div class="top-right"><span class="sub">${esc(sub)}</span><span class="row">${right || ""}<span id="savestate" class="savestate"></span></span></div></div></header>`;
+    if (!left) return `<header class="top"><div class="top-in">${wordmark()}<div class="top-right"><span class="sub">${esc(sub)}</span><span class="row">${right || ""}<span id="savestate" class="savestate"></span></span></div></div></header>`;
     return `<header class="top"><div class="top-in">${left}<div class="grow"><div class="sub">${esc(sub)}</div><h1>${esc(title)}</h1></div><span id="savestate" class="savestate"></span>${right || ""}</div></header>`;
+  }
+  function homeTabs() {
+    const waiting = S.orders.filter((o) => o.status !== "mottatt").length;
+    const t = [["jobs", "Jobber", ""], ["orders", "Bestill", waiting ? String(waiting) : ""]];
+    return `<nav class="tabs"><div class="tabs-in" role="tablist">${t.map(([k, l, c]) => `<button class="tab" role="tab" data-a="home" data-v="${k}" aria-selected="${S.home === k}">${ICONS[k]}<span>${l}</span>${c ? `<span class="c">${c}</span>` : ""}</button>`).join("")}</div></nav>`;
+  }
+  function chips(name, cur, opts) {
+    return `<div class="seg" role="group">${opts.map(([k, l]) => `<button data-a="${name}" data-v="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>`;
   }
 
   function listView() {
@@ -449,19 +640,21 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
     const q = S.q.trim().toLowerCase();
     const list = all
       .filter((j) => S.filter === "alle" || (S.filter === "aktive" ? j.status !== "sendt" : j.status === "sendt"))
-      .filter((j) => !q || [j.kunde, j.sted, j.ref, j.beskrivelse, j.kontakt].join(" ").toLowerCase().includes(q))
+      .filter((j) => S.tfilter === "alle" || (j.jtype || "felt") === S.tfilter)
+      .filter((j) => !q || [j.kunde, j.sted, j.ref, j.ordrenr, j.beskrivelse, j.kontakt].join(" ").toLowerCase().includes(q))
       .sort((a, b) => (b.updated || 0) - (a.updated || 0));
     const nActive = all.filter((j) => j.status !== "sendt").length;
     let body;
     if (S.mode === "loading" && !all.length) body = `<div class="empty"><p>Henter jobbene dine …</p></div>`;
-    else if (!all.length) body = `<div class="empty"><h2>Ingen jobber ennå</h2><p>Opprett en jobb på en kunde. Deretter kan du måle opp slanger, føre varer og timer, og sende en oppsummering på e-post når jobben er ferdig.</p><div class="row"><button class="btn primary" data-a="new">Ny jobb</button><button class="btn" data-a="example">Last inn eksempeljobb</button></div></div>`;
-    else if (!list.length) body = `<div class="empty"><p>Ingen jobber passer søket eller filteret.</p></div>`;
+    else if (!all.length) body = `<div class="empty"><h2>Ingen jobber ennå</h2><p>Opprett en jobb på en kunde. Deretter kan du måle opp slanger, føre varer og timer, og sende rapporten på e-post når jobben er ferdig.</p><div class="row"><button class="btn primary" data-a="new">+ Ny jobb</button><button class="btn" data-a="example">Last inn eksempeljobb</button></div></div>`;
+    else if (!list.length) body = `<div class="empty"><p>Ingen jobber her.</p></div>`;
     else body = `<div class="joblist">${list.map(jobCard).join("")}</div>`;
-    return header("", nActive ? nActive + (nActive === 1 ? " aktiv jobb" : " aktive jobber") : "Ingen aktiv jobb", "", `<button class="iconbtn" data-a="settings">Innstillinger</button>`) +
+    return header("", nActive ? nActive + (nActive === 1 ? " aktiv jobb" : " aktive jobber") : "Ingen aktiv jobb", "", `<button class="iconbtn" data-a="settings">Innstillinger</button>`) + homeTabs() +
       `<main>${modeBanner()}
       <div class="pagehead"><h2>Jobber</h2><button class="btn primary" data-a="new">+ Ny jobb</button></div>
-      <div class="toolbar"><input id="q" class="search" type="search" placeholder="Søk kunde, sted, ref …" value="${esc(S.q)}" aria-label="Søk i jobber"></div>
-      <div class="seg" role="group" aria-label="Filter">${[["aktive", "Pågår / ferdig"], ["sendt", "Sendt"], ["alle", "Alle"]].map(([k, l]) => `<button data-a="filter" data-v="${k}" aria-pressed="${S.filter === k}">${l}</button>`).join("")}</div>
+      ${chips("tfilter", S.tfilter, [["alle", "Alle"], ["felt", "Felt"], ["butikk", "Butikk"], ["verksted", "Verksted"]])}
+      <div class="toolbar"><input id="q" class="search" type="search" placeholder="Søk kunde, sted, ordrenr …" value="${esc(S.q)}" aria-label="Søk i jobber"></div>
+      ${chips("filter", S.filter, [["aktive", "Pågår / ferdig"], ["sendt", "Sendt"], ["alle", "Alle"]])}
       ${body}</main>`;
   }
   function modeBanner() {
@@ -469,57 +662,75 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
   }
   function jobCard(j) {
     const s = hoseSums(j), h = hourSums(j);
-    const st = j.status || "aktiv";
+    const st = j.status || "aktiv", jt = j.jtype || "felt";
     return `<button class="jobcard ${st}" data-a="open" data-id="${esc(j.id)}">
       <span class="stripe"></span>
-      <span class="grow"><span class="jt">${esc(j.kunde || "Uten kunde")}${j.example ? ' <span class="ex">Eksempel</span>' : ""}</span><span class="meta">${esc([j.sted, fmtDate(j.dato), j.ref && "Ref " + j.ref].filter(Boolean).join(" · "))}</span></span>
+      <span class="grow"><span class="jt">${esc(j.kunde || "Uten kunde")}${j.example ? ' <span class="ex">Eksempel</span>' : ""}</span><span class="meta">${esc([j.beskrivelse, j.sted, fmtDate(j.dato), j.ordrenr && "Ordre " + j.ordrenr].filter(Boolean).join(" · "))}</span></span>
       <span class="pill ${st}">${STATUS[st]}</span>
-      <span class="stats"><span><b class="num">${s.count}</b> slanger</span><span><b class="num">${(j.items || []).length}</b> varer</span><span><b class="num">${nf(h.tot, 1)}</b> timer</span></span>
+      <span class="stats"><span class="tb ${jt}">${JTYPES[jt]}</span>${s.count ? `<span><b class="num">${s.count}</b> slanger</span>` : ""}${(j.items || []).length ? `<span><b class="num">${j.items.length}</b> varer</span>` : ""}${h.tot ? `<span><b class="num">${fmtMin(h.tot)}</b></span>` : ""}</span>
     </button>`;
   }
 
+  function ordersView() {
+    const list = S.orders.filter((o) => S.ofilter === "alle" || o.status === S.ofilter);
+    const nDone = S.orders.filter((o) => o.status === "mottatt").length;
+    const rows = list.length ? `<div class="ledger">${list.map((o) => `<div class="lrow ${o.status === "mottatt" ? "done" : ""}"><span class="tag num">${qtyStr(o.antall)}</span>
+        <div class="main"><strong>${esc(o.navn)}</strong>${katName(o.navn) ? ` <span class="d">${esc(katName(o.navn))}</span>` : ""}<div class="d">${esc([o.enhet, o.lev, o.merk].filter(Boolean).join(" · "))}</div></div>
+        <span class="acts"><button class="pill ${o.status}" data-a="ocycle" data-id="${esc(o.id)}" title="Trykk for å endre status">${ORDER_STATUS[o.status] || "Venter"}</button><button class="btn sm danger ${S.armed === "o" + o.id ? "armed" : ""}" data-a="odel" data-id="${esc(o.id)}" aria-label="Slett">${S.armed === "o" + o.id ? "Slett?" : "×"}</button></span></div>`).join("")}</div>`
+      : `<p class="hint">Ingen bestillinger her.</p>`;
+    return header("", "Må bestilles", "", `<button class="iconbtn" data-a="settings">Innstillinger</button>`) + homeTabs() +
+      `<main><form class="panel" id="form-orders"><h2>Legg til bestilling</h2><div class="form">${ORDER_FIELDS.map((f) => fieldHtml(f, f.def || "", "o-")).join("")}</div>
+      <div class="row"><button class="btn primary" type="submit">+ Legg til</button></div></form>
+      <section class="panel"><div class="row"><h2 class="grow">Må bestilles</h2>${nDone ? `<button class="btn sm ghost" data-a="oclear">Fjern mottatte (${nDone})</button>` : ""}</div>
+      ${chips("ofilter", S.ofilter, [["alle", "Alle"], ["venter", "Venter"], ["bestilt", "Bestilt"], ["mottatt", "Mottatt"]])}
+      <p class="hint">Trykk på statusen for å flytte en vare fra Venter til Bestilt og Mottatt.</p>${rows}</section></main>`;
+  }
+
   function jobView(j) {
-    const counts = { hoses: (j.hoses || []).length, items: (j.items || []).length, hours: nf(hourSums(j).tot, 1) + " t" };
-    const tabs = `<nav class="tabs"><div class="tabs-in" role="tablist">${TABS.map(([k, l]) => `<button class="tab" role="tab" data-a="tab" data-v="${k}" aria-selected="${S.tab === k}">${ICONS[k]}<span>${l}</span>${counts[k] !== undefined && counts[k] !== 0 && counts[k] !== "0,0 t" ? `<span class="c">${counts[k]}</span>` : ""}</button>`).join("")}</div></nav>`;
+    const counts = { hoses: (j.hoses || []).length, items: (j.items || []).length, hours: hourSums(j).tot ? fmtMin(hourSums(j).tot) : 0 };
+    const tabs = `<nav class="tabs"><div class="tabs-in" role="tablist">${TABS.map(([k, l]) => `<button class="tab" role="tab" data-a="tab" data-v="${k}" aria-selected="${S.tab === k}">${ICONS[k]}<span>${l}</span>${counts[k] ? `<span class="c">${counts[k]}</span>` : ""}</button>`).join("")}</div></nav>`;
     let content;
     if (S.tab === "info") content = infoTab(j);
     else if (S.tab === "notes") content = notesTab(j);
     else if (S.tab === "send") content = sendTab(j);
     else content = modTab(j, S.tab);
-    return header(j.kunde || "Ny jobb", STATUS[j.status || "aktiv"] + (j.sted ? " · " + j.sted : ""), `<button class="iconbtn" data-a="back" aria-label="Tilbake til jobblisten">‹ Jobber</button>`) + tabs + `<main>${content}</main>`;
+    return header(j.kunde || "Ny jobb", [STATUS[j.status || "aktiv"], j.beskrivelse].filter(Boolean).join(" · "), `<button class="iconbtn" data-a="back" aria-label="Tilbake til jobblisten">‹ Jobber</button>`) + tabs + `<main>${content}</main>`;
   }
 
   function fieldHtml(f, val, prefix) {
     const id = prefix + f.k;
     const v = val != null ? val : "";
     let ctl;
-    if (f.opts) ctl = `<select id="${id}" name="${f.k}">${f.opts.map((o) => `<option${o === v ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+    if (f.opts) ctl = `<select id="${id}" name="${f.k}" ${f.bind ? `data-f="${f.k}"` : ""}>${f.opts.map((o) => `<option${o === v ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
     else if (f.area) ctl = `<textarea id="${id}" name="${f.k}" data-f="${f.k}" placeholder="${esc(f.ph || "")}">${esc(v)}</textarea>`;
-    else ctl = `<input id="${id}" name="${f.k}" ${f.num ? 'inputmode="decimal"' : ""} type="${f.type || "text"}" value="${esc(v)}" placeholder="${esc(f.ph || "")}" ${f.list ? `list="${id}-dl" autocomplete="off"` : ""} ${f.bind ? `data-f="${f.k}"` : ""}>` +
-      (f.list ? `<datalist id="${id}-dl">${suggestions(f).map((s) => `<option value="${esc(s)}"></option>`).join("")}</datalist>` : "");
+    else ctl = `<input id="${id}" name="${f.k}" ${f.num ? 'inputmode="decimal"' : ""} type="${f.type || "text"}" value="${esc(v)}" placeholder="${esc(f.ph || "")}" ${f.list ? `list="${id}-dl"` : ""} ${f.list || f.cat ? 'autocomplete="off"' : ""} ${f.cat ? `data-cat="${esc((f.lsrc || [f.k]).join(","))}" data-mod="${esc(f.mod || "")}"` : ""} ${f.bind ? `data-f="${f.k}"` : ""}>` +
+      (f.list ? `<datalist id="${id}-dl">${suggestions(f.mod, f.lsrc || [f.k]).slice(0, 60).map((s) => `<option value="${esc(s)}"></option>`).join("")}</datalist>` : "");
     return `<div class="fld w${f.w} ${f.cls || ""}"><label for="${id}">${esc(f.l)}${f.req ? " *" : ""}</label>${ctl}</div>`;
   }
 
   function infoTab(j) {
     const F = [
-      { k: "kunde", l: "Kunde", w: 4, bind: true, ph: "Firmanavn" },
+      { k: "kunde", l: "Kunde", w: 4, bind: true, ph: "Equinor, DeepOcean, Privat …" },
+      { k: "beskrivelse", l: "Oppdrag", w: 4, bind: true, ph: "F.eks. Slangebytte kran 3" },
+      { k: "sted", l: "Fartøy / lokasjon", w: 2, bind: true, ph: "Normand Cutter, Karmøy base …" },
       { k: "kontakt", l: "Kontaktperson", w: 2, bind: true },
-      { k: "sted", l: "Sted / fartøy / anlegg", w: 2, bind: true },
+      { k: "ordrenr", l: "Vårt ordrenr.", w: 2, bind: true },
       { k: "ref", l: "Kundens ref. / PO", w: 2, bind: true },
       { k: "dato", l: "Dato", w: 2, bind: true, type: "date" },
-      { k: "utfort", l: "Utført av", w: 4, bind: true, ph: "Navn på teknikere" },
-      { k: "beskrivelse", l: "Oppdrag / beskrivelse", w: 4, bind: true, area: true, ph: "Hva skal gjøres?" }
+      { k: "utfort", l: "Utført av", w: 2, bind: true, ph: "Navn på teknikere" }
     ];
-    const st = j.status || "aktiv";
-    return `<section class="panel"><h2>Jobb og kunde</h2><div class="form">${F.map((f) => fieldHtml(f, j[f.k], "i-")).join("")}</div></section>
-      <section class="panel"><span class="label">Status</span><div class="seg" role="group" aria-label="Status">${Object.entries(STATUS).map(([k, l]) => `<button data-a="status" data-v="${k}" aria-pressed="${st === k}">${l}</button>`).join("")}</div>
+    const st = j.status || "aktiv", jt = j.jtype || "felt";
+    return `<section class="panel"><h2>Jobb og kunde</h2>
+      <div class="fld"><span class="label">Type</span>${chips("jtype", jt, Object.entries(JTYPES))}</div>
+      <div class="form">${F.map((f) => fieldHtml(f, j[f.k], "i-")).join("")}</div></section>
+      <section class="panel"><span class="label">Status</span>${chips("status", st, Object.entries(STATUS))}
       ${j.sentAt ? `<p class="hint">Sist sendt ${esc(new Date(j.sentAt).toLocaleString("nb-NO"))}${j.sentTo ? " til " + esc(j.sentTo) : ""}.</p>` : ""}</section>
       <section class="panel"><span class="label">Slett jobb</span><p class="hint">Sletter jobben og alt som er registrert på den. Kan ikke angres.</p>
       <div><button class="btn danger ${S.armed === "del" ? "armed" : ""}" data-a="deljob">${S.armed === "del" ? "Trykk igjen for å slette" : "Slett jobben"}</button></div></section>`;
   }
 
   function notesTab(j) {
-    return `<section class="panel"><h2>Notater og avvik</h2><div class="form">${fieldHtml({ k: "notes", l: "Notater", w: 4, area: true, ph: "Avvik, anbefalinger, ting som må følges opp …" }, j.notes, "n-")}</div><p class="hint">Teksten tas med nederst i oppsummeringen.</p></section>`;
+    return `<section class="panel"><h2>Notater og avvik</h2><div class="form">${fieldHtml({ k: "notes", l: "Notater", w: 4, area: true, ph: "Avvik, anbefalinger, ting som må følges opp …" }, j.notes, "n-")}</div><p class="hint">Teksten tas med nederst i rapporten.</p></section>`;
   }
 
   function modTab(j, m) {
@@ -528,10 +739,22 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
     const editing = S.edit && S.edit.mod === m ? S.edit : null;
     const base = editing ? rows[editing.idx] : formDefaults(j, m);
     const fields = def.fields.map((f) => Object.assign({ mod: m }, f));
-    const form = `<form class="panel" data-mod="${m}" id="form-${m}"><h2>${editing ? "Endre rad" : def.add}</h2><div class="form">${fields.map((f) => fieldHtml(f, base ? base[f.k] : "", m + "-")).join("")}</div>
-      <div class="row"><button class="btn ${editing ? "dark" : "primary"}" type="submit">${editing ? "Lagre endring" : def.add}</button>${editing ? `<button class="btn ghost" type="button" data-a="canceledit">Avbryt</button>` : ""}</div></form>`;
-    const list = rows.length ? `<div class="ledger">${rows.map((r, i) => rowHtml(m, r, i, editing && editing.idx === i)).join("")}</div>` : `<p class="hint">Ingenting registrert ennå.</p>`;
+    const extra = m === "hours" ? `<div class="prev" id="hours-prev" aria-live="polite">${hoursPreview(base && base.from, base && base.to, base && base.date)}</div>` : "";
+    const form = `<form class="panel" data-mod="${m}" id="form-${m}"><h2>${editing ? "Endre rad" : def.add}</h2><div class="form">${fields.map((f) => fieldHtml(f, base ? base[f.k] : "", m + "-")).join("")}</div>${extra}
+      <div class="row"><button class="btn ${editing ? "dark" : "primary"}" type="submit">${editing ? "Lagre endring" : "+ " + def.add}</button>${editing ? `<button class="btn ghost" type="button" data-a="canceledit">Avbryt</button>` : ""}</div></form>`;
+    let list;
+    if (!rows.length) list = `<p class="hint">Ingenting registrert ennå.</p>`;
+    else if (m === "items") list = `<div class="ledger">${groupItems(rows).map((g) => `<div class="grp"><span>${esc(g.label)}</span></div>` + g.rows.map(({ r, i }) => rowHtml(m, r, i, editing && editing.idx === i)).join("")).join("")}</div>`;
+    else if (m === "hours") list = `<div class="ledger">${rows.map((r, i) => ({ r, i })).sort((a, b) => String(b.r.date + b.r.from).localeCompare(String(a.r.date + a.r.from))).map(({ r, i }) => rowHtml(m, r, i, editing && editing.idx === i)).join("")}</div>`;
+    else list = `<div class="ledger">${rows.map((r, i) => rowHtml(m, r, i, editing && editing.idx === i)).join("")}</div>`;
     return form + `<section class="panel"><div class="row"><h2 class="grow">${def.title}</h2><span class="label">${rows.length} rader</span></div>${totalsHtml(j, m)}${list}</section>`;
+  }
+  function hoursPreview(from, to, date) {
+    if (!from || !to) return "";
+    const parts = splittTimer(from, to, date);
+    const tot = parts.reduce((s, p) => s + p.min, 0);
+    if (!tot) return "";
+    return "= " + fmtMin(tot) + (parts.length > 1 ? " · deles i " + parts.length + " poster: " + parts.map((p) => p.kode).join(", ") : " · " + parts[0].kode);
   }
   function formDefaults(j, m) {
     const def = MODS[m], o = {};
@@ -546,69 +769,108 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
     let tag = "", main = "";
     if (m === "hoses") {
       tag = esc(r.pos || "–");
-      main = `<strong>${esc(r.type)}</strong> · <span class="num">${nf(r.len, 0)} mm</span>${num(r.qty) > 1 ? ` <span class="num">×${esc(r.qty)}</span>` : ""}
+      main = `<strong>${esc(r.type)}</strong>${katName(r.type) ? ` <span class="d">${esc(katName(r.type))}</span>` : ""} · <span class="num">${nf(r.len, 0)} mm</span>${num(r.qty) > 1 ? ` <span class="num">×${esc(r.qty)}</span>` : ""}
         <div class="d">${esc([r.sted, (r.e1 || r.e2) && (r.e1 || "–") + " / " + (r.e2 || "–"), r.hylse && "Hylse " + r.hylse, r.bar && r.bar + " bar", r.note].filter(Boolean).join(" · "))}</div>`;
     } else if (m === "items") {
-      tag = `<span class="num">${nf(r.qty, num(r.qty) % 1 ? 2 : 0)}</span>`;
-      main = `<strong>${esc(r.desc)}</strong> <span class="d">${esc(r.unit || "stk")}</span><div class="d num">${esc(r.nr || "")}</div>`;
+      tag = `<span class="num">${qtyStr(r.qty)}</span>`;
+      main = `<strong>${esc(itemName(r))}</strong> <span class="d">${esc(r.unit || "stk")}</span><div class="d">${esc([r.nr && r.nr !== itemName(r) ? r.nr : "", r.note].filter(Boolean).join(" · "))}</div>`;
     } else {
-      tag = `<span class="num">${nf(r.h, 1)}</span>`;
-      main = `<strong>${esc(fmtDate(r.date))}</strong> ${r.from && r.to ? `<span class="num">${esc(r.from)}–${esc(r.to)}</span>` : ""} · ${esc(r.kind || "Normal")}<div class="d">${esc([r.tech, r.desc].filter(Boolean).join(" · "))}</div>`;
+      tag = `<span class="num">${fmtMin(rowMin(r))}</span>`;
+      main = `<strong class="num">${r.from && r.to ? esc(r.from) + "–" + esc(r.to) : ""}</strong> <span class="kode">${esc(rowKode(r))}</span><div class="d">${esc([fmtDate(r.date), r.tech, r.desc].filter(Boolean).join(" · "))}</div>`;
     }
     return `<div class="lrow ${isEdit ? "editing" : ""}"><span class="tag">${tag}</span><div class="main">${main}</div>${acts}</div>`;
+  }
+  function otBox(rows) {
+    const ot = beregnOvertid(rows || []);
+    const e = Object.entries(ot);
+    if (!e.length) return "";
+    return `<div class="otbox"><span class="label">Overtid å legge til</span>${e.map(([d, v]) => `<div class="ot"><b>${esc(fmtDate(d))}</b>${v.ot50 ? `<span>50 %: ${fmtMin(v.ot50)}</span>` : ""}${v.ot100 ? `<span>100 %: ${fmtMin(v.ot100)}</span>` : ""}</div>`).join("")}</div>`;
   }
   function totalsHtml(j, m) {
     if (m === "hoses" && (j.hoses || []).length) {
       const s = hoseSums(j);
-      const tiles = Object.entries(s.byType).map(([t, v]) => `<div class="tot"><div class="v">${nf(v.mm / 1000, 2)} m</div><div class="k">${esc(t)} · ${v.n} stk</div></div>`).join("");
-      const tbl = (title, o) => Object.keys(o).length ? `<div><span class="label">${title}</span><table class="sumtable">${Object.entries(o).map(([k, n]) => `<tr><td>${esc(k)}</td><td>${n} stk</td></tr>`).join("")}</table></div>` : "";
+      const tiles = Object.entries(s.byType).map(([t, v]) => `<div class="tot"><div class="v">${nf(v.mm / 1000, 2)} m</div><div class="k">${esc(withName(t))} · ${v.n} stk</div></div>`).join("");
+      const tbl = (title, o) => Object.keys(o).length ? `<div><span class="label">${title}</span><table class="sumtable">${Object.entries(o).map(([k, n]) => `<tr><td>${esc(withName(k))}</td><td>${n} stk</td></tr>`).join("")}</table></div>` : "";
       return `<div class="totals">${tiles}</div>${tbl("Innsatser", s.ends)}${tbl("Hylser (2 per slange)", s.ferr)}`;
     }
     if (m === "hours" && (j.hours || []).length) {
       const h = hourSums(j);
-      return `<div class="totals"><div class="tot"><div class="v">${nf(h.tot, 1)} t</div><div class="k">Totalt</div></div>${Object.entries(h.by).map(([k, v]) => `<div class="tot"><div class="v">${nf(v, 1)} t</div><div class="k">${esc(k)}</div></div>`).join("")}</div>`;
+      return `<div class="totals"><div class="tot"><div class="v">${fmtMin(h.tot)}</div><div class="k">Totalt</div></div>${Object.entries(h.by).map(([k, v]) => `<div class="tot"><div class="v">${fmtMin(v)}</div><div class="k">${esc(k)}</div></div>`).join("")}</div>${otBox(j.hours)}`;
     }
     return "";
   }
 
   function sendTab(j) {
     const to = j.sendTo != null ? j.sendTo : S.settings.email || "";
-    const subject = `Jobbrapport ${j.kunde || ""}${j.sted ? " – " + j.sted : ""} ${fmtDate(j.dato)}`.trim();
     const body = summaryText(j);
-    const href = "mailto:" + encodeURIComponent(to).replace(/%40/g, "@") + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+    const href = sendHref(j);
     const long = href.length > 1900;
-    return `<section class="panel"><h2>Send oppsummering</h2>
+    return `<section class="panel"><h2>Send rapport</h2>
       <div class="form">${fieldHtml({ k: "sendTo", l: "Send til e-post", w: 4, bind: true, type: "email", ph: "ordre@firma.no" }, to, "s-")}</div>
       <div class="row"><a class="btn primary" id="mailbtn" href="${esc(href)}"${STANDALONE ? "" : ' target="_blank" rel="noopener"'}>Åpne i e-post</a>
       <button class="btn" data-a="copy">Kopier tekst</button>
       ${downloads || STANDALONE ? `<button class="btn" data-a="csv">Last ned CSV for ordre</button>` : ""}</div>
       <p class="hint">«Åpne i e-post» lager en ferdig utfylt e-post i e-postappen din. Fungerer det ikke på enheten${long ? ", eller blir teksten kuttet (lange rapporter kan bli for lange for e-postlenker)" : ""}, trykk «Kopier tekst» og lim inn i en ny e-post.</p>
       <div class="row"><button class="btn dark" data-a="marksent">Marker som sendt</button>${to ? `<button class="btn ghost" data-a="defaultto">Bruk som standardadresse</button>` : ""}</div></section>
-      <section class="panel"><div class="row"><h2 class="grow">Forhåndsvisning</h2><span class="label">Emne: ${esc(subject)}</span></div><div class="preview" id="preview">${esc(body)}</div></section>`;
+      ${otBox(j.hours) ? `<section class="panel">${otBox(j.hours)}</section>` : ""}
+      <section class="panel"><div class="row"><h2 class="grow">Forhåndsvisning</h2><span class="label">Emne: ${esc(mailSubject(j))}</span></div><div class="preview" id="preview">${esc(body)}</div></section>`;
+  }
+  const mailSubject = (j) => `Jobbrapport ${j.kunde || ""}${j.beskrivelse ? " – " + j.beskrivelse : ""} ${fmtDate(j.dato)}`.replace(/\s+/g, " ").trim();
+  function sendHref(j) {
+    const to = j.sendTo != null ? j.sendTo : S.settings.email || "";
+    return "mailto:" + encodeURIComponent(to).replace(/%40/g, "@") + "?subject=" + encodeURIComponent(mailSubject(j)) + "&body=" + encodeURIComponent(summaryText(j));
   }
 
   function settingsView() {
-    return header("Innstillinger", "Jobbkort", `<button class="iconbtn" data-a="back">‹ Jobber</button>`) +
+    const kat = KAT.state === "ready" ? KAT.list.length.toLocaleString("nb-NO") + " varer i katalogen." : KAT.state === "failed" ? "Fant ikke varekatalogen (varekatalog.json)." : "Henter varekatalogen …";
+    return header("Innstillinger", "Tess Mobilservice", `<button class="iconbtn" data-a="back">‹ Tilbake</button>`) +
       `<main><section class="panel"><h2>Standardverdier</h2><div class="form">
-      ${fieldHtml({ k: "email", l: "Standard e-post for oppsummering", w: 4, type: "email", ph: "ordre@firma.no" }, S.settings.email, "set-")}
+      ${fieldHtml({ k: "email", l: "Standard e-post for rapport", w: 4, type: "email", ph: "ordre@firma.no" }, S.settings.email, "set-")}
       ${fieldHtml({ k: "tech", l: "Ditt navn (forslag på timer)", w: 4 }, S.settings.tech, "set-")}</div>
       <p class="hint">Brukes som forslag i nye jobber.</p></section>
+      <section class="panel"><span class="label">Varekatalog</span><p class="hint">${kat}</p></section>
       <section class="panel"><span class="label">Lagring</span><p class="hint">${S.mode === "db" ? "Jobbene lagres privat på claude.ai-kontoen din. Bare du ser dem, også om du deler lenken til appen." : "Jobbene lagres i nettleseren på denne enheten. De synkes ikke til andre enheter, og de forsvinner hvis du sletter nettstedsdata for appen."}</p></section></main>`;
+  }
+
+  // ---------- catalogue dropdown ----------
+  function closeAc() { const a = $("#ac"); if (a) a.remove(); }
+  function showAc(inp) {
+    closeAc();
+    const q = inp.value.trim();
+    if (q.length < 2) return;
+    const ql = q.toLowerCase();
+    const used = inp.dataset.mod ? suggestions(inp.dataset.mod, inp.dataset.cat.split(",")).filter((s) => s.toLowerCase().includes(ql) && s.toLowerCase() !== ql).slice(0, 5) : [];
+    const hits = katSearch(q, 30).filter((v) => !used.includes(v.nr));
+    if (!used.length && !hits.length) return;
+    const box = document.createElement("div");
+    box.className = "ac"; box.id = "ac"; box.dataset.for = inp.id;
+    box.innerHTML = used.map((s) => `<button type="button" class="ac-i used" data-nr="${esc(s)}" data-navn="${esc(katName(s))}"><b>${esc(s)}</b><span>${esc(katName(s) || "Brukt før")}</span></button>`).join("") +
+      hits.map((v) => `<button type="button" class="ac-i" data-nr="${esc(v.nr)}" data-navn="${esc(v.navn)}"><b>${esc(v.nr)}</b><span>${esc(v.navn)}</span></button>`).join("");
+    inp.parentElement.appendChild(box);
+  }
+  function pickAc(btn) {
+    const box = btn.closest(".ac"), inp = box && $("#" + box.dataset.for);
+    closeAc();
+    if (!inp) return;
+    inp.value = btn.dataset.nr;
+    if (inp.id === "items-nr") { const d = $("#items-desc"); if (d) d.value = btn.dataset.navn || ""; const q = $("#items-qty"); if (q) q.focus(); }
+    else if (inp.id === "o-navn" && btn.dataset.navn) inp.value = btn.dataset.nr + " " + btn.dataset.navn;
+    else { const next = inp.closest(".fld").nextElementSibling; const n = next && next.querySelector("input,select"); if (n) n.focus(); }
   }
 
   // ---------- actions ----------
   function newJob(example) {
     const id = "job-" + uid8();
-    const j = { type: "job", id, kunde: "", kontakt: "", sted: "", ref: "", dato: today(), utfort: S.settings.tech || "", beskrivelse: "", status: "aktiv", hoses: [], items: [], hours: [], notes: "", created: Date.now(), updated: Date.now() };
+    const j = { type: "job", id, jtype: S.tfilter !== "alle" ? S.tfilter : "felt", kunde: "", kontakt: "", sted: "", ordrenr: "", ref: "", dato: today(), utfort: S.settings.tech || "", beskrivelse: "", status: "aktiv", hoses: [], items: [], hours: [], notes: "", created: Date.now(), updated: Date.now() };
     if (example) Object.assign(j, {
-      example: true, kunde: "Eksempel Rederi AS", kontakt: "Kari Maskinsjef", sted: "MS Eksempel, kai 4", ref: "PO-1234",
-      beskrivelse: "Bytte av hydraulikkslanger på dekkskran etter lekkasje.",
+      example: true, jtype: "felt", kunde: "Eksempel Rederi AS", kontakt: "Kari Maskinsjef", sted: "MS Eksempel, kai 4", ordrenr: "100234", ref: "PO-1234",
+      beskrivelse: "Slangebytte dekkskran",
       hoses: [
-        { pos: "1", sted: "Dekkskran, hovedsylinder", type: '1/2" 2SN', len: "1250", qty: "2", e1: "DKOL M22", e2: "DKOL 90° M22", hylse: "00210-08", bar: "250", note: "" },
-        { pos: "2", sted: "Dekkskran, sving", type: '3/8" 2SN', len: "800", qty: "1", e1: "DKOL M18", e2: "DKOL M18", hylse: "00210-06", bar: "250", note: "Skifte beskyttelsesstrømpe" }
+        { pos: "1", sted: "Dekkskran, hovedsylinder", type: "5256-08", len: "1250", qty: "2", e1: "DKOL M22", e2: "DKOL 90° M22", hylse: "65125-08", bar: "250", note: "" },
+        { pos: "2", sted: "Dekkskran, sving", type: "5256-06", len: "800", qty: "1", e1: "DKOL M18", e2: "DKOL M18", hylse: "65125-06", bar: "250", note: "Skifte beskyttelsesstrømpe" }
       ],
-      items: [{ nr: "", desc: "Hydraulikkolje HV46", qty: "20", unit: "l" }],
-      hours: [{ date: today(), tech: S.settings.tech || "", from: "07:30", to: "15:00", h: "7.5", kind: "Normal", desc: "Oppmåling og montering" }],
+      items: [{ nr: "", desc: "Hydraulikkolje HV46", qty: "20", unit: "liter", note: "" }],
+      hours: splittTimer("13:00", "18:30", today()).map((p) => ({ date: today(), from: p.fra, to: p.til, min: p.min, kode: p.kode, tech: S.settings.tech || "", desc: "Oppmåling og montering" })),
       notes: "Eksempeljobb. Slett den når du har sett hvordan appen virker."
     });
     S.jobs[id] = j;
@@ -618,32 +880,36 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
     if (!example) setTimeout(() => { const k = $("#i-kunde"); if (k) k.focus(); }, 30);
   }
 
-  function readForm(form, m) {
+  function readForm(form, fields) {
     const o = {};
-    for (const f of MODS[m].fields) { const el = form.elements[f.k]; if (el) o[f.k] = el.value.trim(); }
-    if (m === "hours" && !o.h && o.from && o.to) o.h = String(calcH(o.from, o.to));
+    for (const f of fields) { const el = form.elements[f.k]; if (el) o[f.k] = el.value.trim(); }
     return o;
   }
-  function calcH(a, b) {
-    const t = (s) => { const [h, m] = s.split(":").map(Number); return h * 60 + (m || 0); };
-    let d = t(b) - t(a); if (d < 0) d += 1440;
-    return Math.round(d / 15) / 4;
-  }
+
+  document.addEventListener("mousedown", (e) => { if (e.target.closest(".ac-i")) e.preventDefault(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAc(); });
 
   document.addEventListener("click", async (e) => {
+    const ai = e.target.closest(".ac-i");
+    if (ai) { pickAc(ai); return; }
+    if (!e.target.closest(".ac") && !(e.target.dataset && e.target.dataset.cat)) closeAc();
     const b = e.target.closest("[data-a]");
     if (!b) return;
     const a = b.dataset.a, j = S.jobs[S.jobId];
-    if (a !== "deljob" && a !== "delrow" && S.armed) { S.armed = null; }
+    if (a !== "deljob" && a !== "delrow" && a !== "odel" && S.armed) { S.armed = null; }
     switch (a) {
-      case "new": newJob(false); break;
+      case "new": S.home = "jobs"; newJob(false); break;
       case "example": newJob(true); break;
       case "open": S.view = "job"; S.jobId = b.dataset.id; S.tab = "info"; S.edit = null; render(); window.scrollTo(0, 0); break;
       case "back": S.view = "list"; S.jobId = null; S.edit = null; render(); window.scrollTo(0, 0); break;
       case "settings": S.view = "settings"; render(); break;
+      case "home": S.home = b.dataset.v; render(); window.scrollTo(0, 0); break;
       case "filter": S.filter = b.dataset.v; render(); break;
+      case "tfilter": S.tfilter = b.dataset.v; render(); break;
+      case "ofilter": S.ofilter = b.dataset.v; S.keepScroll = true; render(); break;
       case "tab": S.tab = b.dataset.v; S.edit = null; render(); window.scrollTo(0, 0); break;
-      case "status": j.status = b.dataset.v; touch(j.id); render(); break;
+      case "status": j.status = b.dataset.v; touch(j.id); S.keepScroll = true; render(); break;
+      case "jtype": j.jtype = b.dataset.v; touch(j.id); S.keepScroll = true; render(); break;
       case "deljob":
         if (S.armed !== "del") { S.armed = "del"; S.keepScroll = true; render(); return; }
         S.armed = null; delete S.jobs[j.id]; dirty.add(j.id); flush(j.id); S.view = "list"; S.jobId = null; render(); toast("Jobben er slettet"); break;
@@ -654,6 +920,13 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
         if (S.armed !== key) { S.armed = key; S.keepScroll = true; render(); return; }
         S.armed = null; j[b.dataset.m].splice(+b.dataset.i, 1); S.edit = null; touch(j.id); S.keepScroll = true; render(); break;
       }
+      case "ocycle": { const o = S.orders.find((x) => x.id === b.dataset.id); if (o) { o.status = NEXT_STATUS[o.status] || "bestilt"; touch("orders"); S.keepScroll = true; render(); } break; }
+      case "odel": {
+        const key = "o" + b.dataset.id;
+        if (S.armed !== key) { S.armed = key; S.keepScroll = true; render(); return; }
+        S.armed = null; S.orders = S.orders.filter((x) => x.id !== b.dataset.id); touch("orders"); S.keepScroll = true; render(); break;
+      }
+      case "oclear": { const n = S.orders.filter((x) => x.status === "mottatt").length; S.orders = S.orders.filter((x) => x.status !== "mottatt"); touch("orders"); toast(n + " fjernet"); S.keepScroll = true; render(); break; }
       case "copy": {
         const txt = summaryText(j);
         try { await navigator.clipboard.writeText(txt); toast("Teksten er kopiert"); }
@@ -679,30 +952,50 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
   });
 
   document.addEventListener("submit", (e) => {
-    const form = e.target.closest("form[data-mod]");
-    if (!form) return;
     e.preventDefault();
+    closeAc();
+    const form = e.target;
+    if (form.id === "form-orders") {
+      const o = readForm(form, ORDER_FIELDS);
+      if (!o.navn) { toast("Skriv inn vare eller beskrivelse"); $("#o-navn").focus(); return; }
+      S.orders.unshift(Object.assign({ id: "o-" + uid8(), status: "venter" }, o, { antall: o.antall || "1" }));
+      touch("orders"); toast("Lagt til"); render();
+      const n = $("#o-navn"); if (n) n.focus();
+      return;
+    }
+    if (!form.dataset.mod) return;
     const m = form.dataset.mod, j = S.jobs[S.jobId];
-    const o = readForm(form, m);
+    const o = readForm(form, MODS[m].fields);
     const miss = MODS[m].fields.filter((f) => f.req && !o[f.k]);
     if (miss.length) { toast("Fyll ut: " + miss.map((f) => f.l).join(", ")); const el = form.elements[miss[0].k]; if (el) el.focus(); return; }
+    if (m === "items" && !o.nr && !o.desc) { toast("Skriv inn varenr. eller beskrivelse"); $("#items-nr").focus(); return; }
+    if (m === "items" && o.nr && !o.desc) o.desc = katName(o.nr);
+    let add = [o];
+    if (m === "hours") {
+      const parts = splittTimer(o.from, o.to, o.date);
+      if (!parts.reduce((s, p) => s + p.min, 0)) { toast("Fra og til er like"); return; }
+      add = parts.map((p) => ({ date: o.date, from: p.fra, to: p.til, min: p.min, kode: p.kode, tech: o.tech, desc: o.desc }));
+    }
     j[m] = j[m] || [];
-    if (S.edit && S.edit.mod === m) { j[m][S.edit.idx] = o; S.edit = null; toast("Endringen er lagret"); }
-    else { j[m].push(o); toast(MODS[m].title === "Slanger" ? "Slange " + (o.pos || "") + " lagt til" : "Lagt til"); }
+    if (S.edit && S.edit.mod === m) { j[m].splice(S.edit.idx, 1, ...add); S.edit = null; toast("Endringen er lagret"); }
+    else {
+      j[m].push(...add);
+      toast(m === "hoses" ? "Slange " + (o.pos || "") + " lagt til" : m === "hours" ? (add.length > 1 ? "Delt i " + add.length + " poster" : "Tid registrert") : "Lagt til");
+    }
     S.last = S.last || {}; S.last[j.id + m] = o;
     touch(j.id);
     render();
-    const first = $(`#form-${m} input:not([type=date])`);
-    if (first) { const f2 = m === "hoses" ? $("#hoses-len") : first; if (f2) f2.focus(); }
+    const focusId = { hoses: "hoses-len", items: "items-nr", hours: "hours-from" }[m];
+    const f2 = focusId && $("#" + focusId); if (f2) f2.focus();
   });
 
   document.addEventListener("input", (e) => {
     const t = e.target;
+    if (t.dataset && t.dataset.cat) showAc(t);
     if (t.id === "q") { S.q = t.value; const pos = t.selectionStart; render(); const q = $("#q"); q.focus(); try { q.setSelectionRange(pos, pos); } catch (x) {} return; }
     if (t.id && t.id.startsWith("set-")) { S.settings[t.name] = t.value; touch("settings"); return; }
-    if ((t.id === "hours-from" || t.id === "hours-to")) {
-      const f = $("#hours-from").value, to = $("#hours-to").value;
-      if (f && to) $("#hours-h").value = String(calcH(f, to)).replace(".", ",");
+    if (t.id === "hours-from" || t.id === "hours-to" || t.id === "hours-date") {
+      const p = $("#hours-prev"); if (p) p.textContent = hoursPreview($("#hours-from").value, $("#hours-to").value, $("#hours-date").value);
       return;
     }
     const j = S.jobs[S.jobId];
@@ -711,14 +1004,9 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
       j[t.dataset.f] = t.value;
       touch(j.id);
       if (t.dataset.f === "sendTo") { const mb = $("#mailbtn"); if (mb) mb.setAttribute("href", sendHref(j)); }
-      if (t.dataset.f === "kunde" || t.dataset.f === "sted") { const h1 = $(".top h1"); if (h1) h1.textContent = j.kunde || "Ny jobb"; }
+      if (t.dataset.f === "kunde") { const h1 = $(".top h1"); if (h1) h1.textContent = j.kunde || "Ny jobb"; }
     }
   });
-  function sendHref(j) {
-    const to = j.sendTo != null ? j.sendTo : S.settings.email || "";
-    const subject = `Jobbrapport ${j.kunde || ""}${j.sted ? " – " + j.sted : ""} ${fmtDate(j.dato)}`.trim();
-    return "mailto:" + encodeURIComponent(to).replace(/%40/g, "@") + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(summaryText(j));
-  }
 
   init();
 })();
