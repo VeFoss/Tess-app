@@ -185,6 +185,8 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
 
 .preview { background: var(--sunk); border: 1px solid var(--line); border-radius: 8px; padding: 14px; font: 500 13px/1.5 var(--f-mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 420px; overflow: auto; }
 .hint { font-size: 14px; color: var(--muted); margin: 0; }
+.mailframe { width: 100%; height: 640px; border: 1px solid var(--line); border-radius: 8px; background: #eef1ec; display: block; }
+details summary { cursor: pointer; padding: 4px 0; }
 .toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-weight: 600; z-index: 20; max-width: calc(100% - 32px); }
 .ex { font: 600 11px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--warn); }
 @media (prefers-reduced-motion: no-preference) { .jobcard { transition: border-color .15s; } .jobcard:hover { border-color: var(--steel); } }
@@ -778,6 +780,93 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
     if (job.notes) { hr(); line("NOTATER / AVVIK"); line(job.notes); }
     return L.join("\n");
   }
+  // Formatted e-mail version of the report. Table layout with inline styles so it holds up in Outlook, Gmail and phone mail apps.
+  function summaryHtml(job) {
+    const G = "#2b7a3b", INK = "#1b211c", MUT = "#5e6a60", LINE = "#dfe4dc", SOFT = "#f3f6f1", AMBER = "#9a5a08", AMBER_BG = "#fdf3e2";
+    const F = "font-family:Arial,Helvetica,sans-serif;";
+    const e = (v) => esc(v == null ? "" : v);
+    const td = (v, s) => `<td style="${F}padding:8px 10px;border-bottom:1px solid ${LINE};font-size:14px;line-height:1.4;color:${INK};vertical-align:top;${s || ""}">${v}</td>`;
+    const th = (v, s) => `<th align="left" style="${F}padding:8px 10px;background:${SOFT};border-bottom:2px solid ${LINE};font-size:11px;color:${MUT};text-transform:uppercase;letter-spacing:.05em;font-weight:700;${s || ""}">${v}</th>`;
+    const table = (head, rows) => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 6px">${head ? `<tr>${head}</tr>` : ""}${rows}</table>`;
+    const section = (title, inner) => `<tr><td style="padding:22px 28px 0"><h2 style="${F}margin:0 0 10px;font-size:16px;color:${G};text-transform:uppercase;letter-spacing:.06em">${title}</h2>${inner}</td></tr>`;
+    const R = "text-align:right;white-space:nowrap;";
+    const small = (v) => v ? `<div style="${F}font-size:12px;color:${MUT};margin-top:2px">${v}</div>` : "";
+    const badge = (t, c, bg) => `<span style="${F}display:inline-block;padding:3px 9px;border-radius:12px;font-size:12px;font-weight:700;color:${c};background:${bg};margin-right:6px">${e(t)}</span>`;
+
+    const hs = hourSums(job), s = hoseSums(job);
+    const ord = jobOrders(job.id).filter((o) => o.status !== "mottatt");
+    const st = job.status || "aktiv";
+    const out = [];
+
+    // Header and title
+    out.push(`<tr><td style="background:${G};padding:18px 28px"><div style="${F}color:#fff;font-size:28px;font-weight:900;letter-spacing:.03em;line-height:1">${e(BRAND.name)}</div><div style="${F}color:#e2f1e2;font-size:10px;letter-spacing:.12em;margin-top:4px">${e(BRAND.tag)}</div></td></tr>`);
+    out.push(`<tr><td style="padding:24px 28px 4px"><div style="${F}font-size:12px;color:${MUT};text-transform:uppercase;letter-spacing:.08em">Jobbrapport · ${e(fmtDate(job.dato))}</div>
+      <h1 style="${F}margin:6px 0 4px;font-size:24px;line-height:1.25;color:${INK}">${e(job.kunde || "Uten kunde")}</h1>
+      ${job.beskrivelse ? `<div style="${F}font-size:16px;color:${INK}">${e(job.beskrivelse)}</div>` : ""}
+      <div style="margin-top:10px">${badge(JTYPES[job.jtype || "felt"] || "Felt", G, "#e2f1e2")}${badge(STATUS[st], st === "aktiv" ? "#3a6d8e" : G, st === "aktiv" ? "#e3eef5" : "#e2f1e2")}</div></td></tr>`);
+
+    // Key facts
+    const facts = [["Lokasjon", job.sted], ["Kontaktperson", job.kontakt], ["Vårt ordrenr.", job.ordrenr], ["Kundens ref. / PO", job.ref], ["Dato", fmtDate(job.dato)], ["Utført av", job.utfort]].filter(([, v]) => v);
+    if (facts.length) {
+      const cells = facts.map(([k, v]) => `<td width="50%" style="${F}padding:8px 0;vertical-align:top"><div style="font-size:11px;color:${MUT};text-transform:uppercase;letter-spacing:.05em">${k}</div><div style="font-size:15px;color:${INK};margin-top:2px">${e(v)}</div></td>`);
+      let rows = ""; for (let i = 0; i < cells.length; i += 2) rows += `<tr>${cells[i]}${cells[i + 1] || "<td></td>"}</tr>`;
+      out.push(`<tr><td style="padding:10px 28px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${LINE};border-bottom:1px solid ${LINE}">${rows}</table></td></tr>`);
+    }
+
+    // Summary tiles
+    const tiles = [[hs.tot ? fmtMin(hs.tot) : "–", "Timer"], [String(s.count || 0), "Slanger"], [String((job.items || []).length), "Varelinjer"], [String(ord.length), "Til bestilling"]];
+    out.push(`<tr><td style="padding:16px 24px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${tiles.map(([v, k]) => `<td width="25%" style="padding:0 4px"><div style="background:${SOFT};border-radius:8px;padding:10px 12px"><div style="${F}font-size:20px;font-weight:700;color:${INK}">${e(v)}</div><div style="${F}font-size:12px;color:${MUT}">${k}</div></div></td>`).join("")}</tr></table></td></tr>`);
+
+    // Hours
+    if ((job.hours || []).length) {
+      const rows = (job.hours || []).slice().sort((a, b) => String(a.date + a.from).localeCompare(String(b.date + b.from))).map((r) =>
+        `<tr>${td(e(fmtDate(r.date)), "white-space:nowrap;")}${td(r.from && r.to ? e(r.from) + "–" + e(r.to) : "", "white-space:nowrap;")}${td(e(fmtMin(rowMin(r))), R)}${td(`<span style="font-family:Consolas,monospace;font-size:13px">${e(rowKode(r))}</span>`, "white-space:nowrap;")}${td(e([r.tech, r.desc].filter(Boolean).join(" – ")))}</tr>`).join("");
+      const sums = Object.entries(hs.by).map(([k, v]) => `<tr>${td("", "border-bottom:0;")}${td("Sum", `border-bottom:0;color:${MUT};`)}${td(`<b>${e(fmtMin(v))}</b>`, R + "border-bottom:0;")}${td(`<span style="font-family:Consolas,monospace;font-size:13px">${e(k)}</span>`, "border-bottom:0;")}${td("", "border-bottom:0;")}</tr>`).join("");
+      const tl = `border-top:2px solid ${LINE};border-bottom:0;`;
+      const total = `<tr>${td("", tl)}${td("<b>Totalt</b>", tl)}${td(`<b>${e(fmtMin(hs.tot))}</b>`, R + tl)}${td("", tl)}${td("", tl)}</tr>`;
+      let inner = table(th("Dato") + th("Tid") + th("Timer", R) + th("Kode") + th("Tekniker / arbeid"), rows + sums + total);
+      const ot = Object.entries(beregnOvertid(job.hours || []));
+      if (ot.length) inner += `<div style="${F}background:${AMBER_BG};border:1px solid #f1d6a8;border-radius:8px;padding:10px 14px;margin-top:10px"><div style="font-size:11px;font-weight:700;color:${AMBER};text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Overtid å legge til</div>${ot.map(([d, v]) => `<div style="font-size:14px;color:${INK};padding:2px 0"><b>${e(fmtDate(d))}</b>${v.ot50 ? ` &nbsp;·&nbsp; 50 %: ${e(fmtMin(v.ot50))}` : ""}${v.ot100 ? ` &nbsp;·&nbsp; 100 %: ${e(fmtMin(v.ot100))}` : ""}</div>`).join("")}</div>`;
+      out.push(section("Timer", inner));
+    }
+
+    // Hoses
+    if ((job.hoses || []).length) {
+      const rows = job.hoses.map((h) => `<tr>${td(`<b>${e(h.pos || "–")}</b>`, "white-space:nowrap;")}${td(`<b>${e(h.type)}</b>${small(e([katName(h.type), h.sted].filter(Boolean).join(" · ")))}`)}${td(`${e(nf(h.len, 0))} mm${num(h.qty) > 1 ? ` × ${e(h.qty)}` : ""}`, R)}${td(`${e(h.e1 || "–")} / ${e(h.e2 || "–")}${small(e([h.hylse && "Hylse " + h.hylse, h.bar && h.bar + " bar"].filter(Boolean).join(" · ")))}`)}${td(e(h.note || ""))}</tr>`).join("");
+      let inner = table(th("Pos") + th("Slange / sted") + th("Lengde", R) + th("Ender / hylse") + th("Merknad"), rows);
+      const mat = [];
+      for (const [t, v] of Object.entries(s.byType)) mat.push([t, katName(t) || "Slange", nf(v.mm / 1000, 2) + " m"]);
+      for (const [t, n] of Object.entries(s.ferr)) mat.push([t, katName(t) || "Hylse", n + " stk"]);
+      for (const [t, n] of Object.entries(s.ends)) mat.push([t, katName(t) || "Innsats", n + " stk"]);
+      inner += `<div style="${F}font-size:12px;font-weight:700;color:${MUT};text-transform:uppercase;letter-spacing:.05em;margin:14px 0 6px">Materiell til slangene</div>` +
+        table(th("Varenr.") + th("Beskrivelse") + th("Antall", R), mat.map(([a, b, c]) => `<tr>${td(`<span style="font-family:Consolas,monospace;font-size:13px">${e(a)}</span>`, "white-space:nowrap;")}${td(e(b))}${td(`<b>${e(c)}</b>`, R)}</tr>`).join(""));
+      out.push(section(`Slanger (${s.count} stk)`, inner));
+    }
+
+    // Materials
+    if ((job.items || []).length) {
+      const rows = groupItems(job.items).map((g) => `<tr><td colspan="4" style="${F}padding:12px 10px 4px;font-size:11px;font-weight:700;color:${G};text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid ${LINE}">${e(g.label)}</td></tr>` +
+        g.rows.map(({ r }) => `<tr>${td(`<span style="font-family:Consolas,monospace;font-size:13px">${e(r.nr || "")}</span>`, "white-space:nowrap;")}${td(e(r.desc || katName(r.nr)) + small(e(r.note || "")))}${td(`<b>${e(qtyStr(r.qty))}</b>`, R)}${td(e(r.unit || "stk"), "white-space:nowrap;")}</tr>`).join("")).join("");
+      out.push(section("Materiell", table(th("Varenr.") + th("Beskrivelse") + th("Antall", R) + th("Enhet"), rows)));
+    }
+
+    // Orders
+    if (ord.length) {
+      const rows = ord.map((o) => `<tr>${td(e(o.navn) + small(e(o.merk || "")))}${td(`<b>${e(qtyStr(o.antall))}</b> ${e(o.enhet || "stk")}`, R)}${td(e(o.lev || ""))}${td(badge(ORDER_STATUS[o.status] || "Venter", o.status === "bestilt" ? "#3a6d8e" : AMBER, o.status === "bestilt" ? "#e3eef5" : AMBER_BG))}</tr>`).join("");
+      out.push(section("Må bestilles", table(th("Vare") + th("Antall", R) + th("Leverandør") + th("Status"), rows)));
+    }
+
+    // Notes
+    if (job.notes) out.push(section("Notater og avvik", `<div style="${F}font-size:14px;line-height:1.55;color:${INK};background:${SOFT};border-left:4px solid ${G};padding:12px 14px;border-radius:0 6px 6px 0">${e(job.notes).replace(/\n/g, "<br>")}</div>`));
+
+    const who = sbUser && sbUser.email ? " av " + e(sbUser.email) : "";
+    out.push(`<tr><td style="padding:26px 28px 24px"><div style="${F}border-top:1px solid ${LINE};padding-top:12px;font-size:12px;color:${MUT}">Sendt fra Tess Mobilservice${who} · ${e(new Date().toLocaleString("nb-NO", { dateStyle: "short", timeStyle: "short" }))}</div></td></tr>`);
+
+    return `<!doctype html><html lang="nb"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(mailSubject(job))}</title></head>
+<body style="margin:0;padding:0;background:#eef1ec"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1ec"><tr><td align="center" style="padding:20px 10px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:700px;background:#ffffff;border-radius:10px;overflow:hidden;border:1px solid ${LINE}">${out.join("")}</table>
+</td></tr></table></body></html>`;
+  }
   function csvText(job) {
     const q = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
     const rows = [["Kategori", "Varenr", "Beskrivelse", "Antall", "Enhet", "Kommentar"]];
@@ -1013,7 +1102,9 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
       <p class="hint">${sbUser ? "Du kan også åpne rapporten i din egen e-postapp eller kopiere teksten." : `«Åpne i e-post» lager en ferdig utfylt e-post i e-postappen din. Fungerer det ikke på enheten${long ? ", eller blir teksten kuttet (lange rapporter kan bli for lange for e-postlenker)" : ""}, trykk «Kopier tekst» og lim inn i en ny e-post.`}</p>
       <div class="row"><button class="btn dark" data-a="marksent">Marker som sendt</button>${to ? `<button class="btn ghost" data-a="defaultto">Bruk som standardadresse</button>` : ""}</div></section>
       ${otBox(j.hours) ? `<section class="panel">${otBox(j.hours)}</section>` : ""}
-      <section class="panel"><div class="row"><h2 class="grow">Forhåndsvisning</h2><span class="label">Emne: ${esc(mailSubject(j))}</span></div><div class="preview" id="preview">${esc(body)}</div></section>`;
+      <section class="panel"><div class="row"><h2 class="grow">Forhåndsvisning</h2><span class="label">Emne: ${esc(mailSubject(j))}</span></div>
+        <iframe class="mailframe" title="Forhåndsvisning av e-posten" sandbox="allow-same-origin" srcdoc="${esc(summaryHtml(j))}" onload="try{this.style.height=(this.contentDocument.body.scrollHeight+4)+'px'}catch(e){}"></iframe>
+        <details><summary class="hint">Vis som ren tekst</summary><div class="preview" id="preview">${esc(body)}</div></details></section>`;
   }
   const mailSubject = (j) => `Jobbrapport ${j.kunde || ""}${j.beskrivelse ? " – " + j.beskrivelse : ""} ${fmtDate(j.dato)}`.replace(/\s+/g, " ").trim();
   function sendHref(j) {
@@ -1182,7 +1273,7 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
         btn.disabled = true; btn.textContent = "Sender …"; say("Sender rapporten …");
         const name = ("ordre-" + (j.kunde || "jobb") + "-" + (j.dato || today())).replace(/[^\wæøåÆØÅ.-]+/g, "_") + ".csv";
         try {
-          const { data, error } = await sb.functions.invoke(SEND_FN, { body: { to, subject: mailSubject(j), text: summaryText(j), csv: $("#s-csv") && $("#s-csv").checked ? csvText(j) : "", csvName: name } });
+          const { data, error } = await sb.functions.invoke(SEND_FN, { body: { to, subject: mailSubject(j), text: summaryText(j), html: summaryHtml(j), csv: $("#s-csv") && $("#s-csv").checked ? csvText(j) : "", csvName: name } });
           if (error || !data || !data.ok) {
             let code = data && data.error;
             if (!code && error && error.context && error.context.json) { try { code = (await error.context.json()).error; } catch (x) {} }

@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   const user = await who.json();
   if (!user || !user.id) return json({ error: "not_signed_in" }, 401);
 
-  let body: { to?: string; subject?: string; text?: string; csv?: string; csvName?: string };
+  let body: { to?: string; subject?: string; text?: string; html?: string; csv?: string; csvName?: string };
   try { body = await req.json(); } catch { return json({ error: "bad_request" }, 400); }
 
   const to = String(body.to || "").split(/[,;]/).map((s) => s.trim()).filter(Boolean);
@@ -36,6 +36,8 @@ Deno.serve(async (req) => {
   const subject = String(body.subject || "Jobbrapport").slice(0, 200);
   const text = String(body.text || "");
   if (!text || text.length > 200_000) return json({ error: "bad_text" }, 400);
+  // Formatted version built by the app; the plain text above goes along as the fallback.
+  const html = body.html && String(body.html).length <= 500_000 ? String(body.html) : undefined;
 
   const gmailUser = Deno.env.get("GMAIL_USER");
   const gmailPass = Deno.env.get("GMAIL_APP_PASSWORD");
@@ -54,6 +56,7 @@ Deno.serve(async (req) => {
       replyTo: user.email || undefined,
       subject,
       text,
+      html,
       attachments: body.csv
         ? [{ filename: String(body.csvName || "ordre.csv").slice(0, 120), content: String(body.csv), contentType: "text/csv; charset=utf-8" }]
         : [],
