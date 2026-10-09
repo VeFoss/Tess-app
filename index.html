@@ -1002,10 +1002,13 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
     const long = href.length > 1900;
     return `<section class="panel"><h2>Send rapport</h2>
       <div class="form">${fieldHtml({ k: "sendTo", l: "Send til e-post", w: 4, bind: true, type: "email", ph: "ordre@firma.no" }, to, "s-")}</div>
-      <div class="row"><a class="btn primary" id="mailbtn" href="${esc(href)}"${STANDALONE ? "" : ' target="_blank" rel="noopener"'}>Åpne i e-post</a>
+      ${sbUser ? `<div class="row"><button class="btn primary" data-a="sendmail" id="sendbtn">Send rapport</button>
+        <label class="row" for="s-csv" style="gap:6px"><input type="checkbox" id="s-csv" checked> Legg ved CSV for ordre</label></div>
+        <p class="hint" id="send-msg" aria-live="polite">Sendes direkte fra appen. Svar på e-posten går til ${esc(sbUser.email || "deg")}.</p>` : ""}
+      <div class="row"><a class="btn ${sbUser ? "" : "primary"}" id="mailbtn" href="${esc(href)}"${STANDALONE ? "" : ' target="_blank" rel="noopener"'}>Åpne i e-post</a>
       <button class="btn" data-a="copy">Kopier tekst</button>
       ${downloads || STANDALONE ? `<button class="btn" data-a="csv">Last ned CSV for ordre</button>` : ""}</div>
-      <p class="hint">«Åpne i e-post» lager en ferdig utfylt e-post i e-postappen din. Fungerer det ikke på enheten${long ? ", eller blir teksten kuttet (lange rapporter kan bli for lange for e-postlenker)" : ""}, trykk «Kopier tekst» og lim inn i en ny e-post.</p>
+      <p class="hint">${sbUser ? "Du kan også åpne rapporten i din egen e-postapp eller kopiere teksten." : `«Åpne i e-post» lager en ferdig utfylt e-post i e-postappen din. Fungerer det ikke på enheten${long ? ", eller blir teksten kuttet (lange rapporter kan bli for lange for e-postlenker)" : ""}, trykk «Kopier tekst» og lim inn i en ny e-post.`}</p>
       <div class="row"><button class="btn dark" data-a="marksent">Marker som sendt</button>${to ? `<button class="btn ghost" data-a="defaultto">Bruk som standardadresse</button>` : ""}</div></section>
       ${otBox(j.hours) ? `<section class="panel">${otBox(j.hours)}</section>` : ""}
       <section class="panel"><div class="row"><h2 class="grow">Forhåndsvisning</h2><span class="label">Emne: ${esc(mailSubject(j))}</span></div><div class="preview" id="preview">${esc(body)}</div></section>`;
@@ -1165,6 +1168,36 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
         if (!downloads) return;
         try { await downloads.save({ filename: name, data: csvText(j) }); toast("CSV lagret"); }
         catch (err) { if (err && err.code !== "declined") toast("Kunne ikke lage filen her."); }
+        break;
+      }
+      case "sendmail": {
+        const btn = $("#sendbtn"), msg = $("#send-msg");
+        const say = (t) => { if (msg) msg.textContent = t; };
+        const to = String(j.sendTo != null ? j.sendTo : S.settings.email || "").trim();
+        if (!to || !to.split(/[,;]/).every((a) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.trim()))) { say("Skriv inn en gyldig e-postadresse i feltet over."); const f = $("#s-sendTo"); if (f) f.focus(); break; }
+        if (!navigator.onLine) { say("Du er ikke på nett. Prøv igjen når du har dekning, eller bruk «Åpne i e-post»."); break; }
+        if (!sb) { say("Får ikke kontakt med sendetjenesten. Last siden på nytt."); break; }
+        btn.disabled = true; btn.textContent = "Sender …"; say("Sender rapporten …");
+        const name = ("ordre-" + (j.kunde || "jobb") + "-" + (j.dato || today())).replace(/[^\wæøåÆØÅ.-]+/g, "_") + ".csv";
+        try {
+          const { data, error } = await sb.functions.invoke("send-report", { body: { to, subject: mailSubject(j), text: summaryText(j), csv: $("#s-csv") && $("#s-csv").checked ? csvText(j) : "", csvName: name } });
+          if (error || !data || !data.ok) {
+            let code = data && data.error;
+            if (!code && error && error.context && error.context.json) { try { code = (await error.context.json()).error; } catch (x) {} }
+            throw new Error(code || (error && error.message) || "ukjent feil");
+          }
+          j.status = "sendt"; j.sentAt = Date.now(); j.sentTo = to; touch(j.id);
+          toast("Rapporten er sendt til " + to); S.keepScroll = true; render();
+        } catch (err) {
+          const m = String(err && err.message || err);
+          const nice = /not_signed_in/.test(m) ? "Du er logget ut. Logg inn på nytt og prøv igjen."
+            : /sender_not_configured/.test(m) ? "Avsenderadressen er ikke satt opp i Supabase ennå (GMAIL_USER og GMAIL_APP_PASSWORD)."
+            : /send_failed/.test(m) ? "Gmail avviste sendingen. Sjekk at app-passordet er riktig."
+            : /bad_recipient/.test(m) ? "Mottakeradressen ser ikke riktig ut."
+            : /Failed to send a request|not found|404/i.test(m) ? "Sendefunksjonen finnes ikke i Supabase ennå (send-report)."
+            : "Kunne ikke sende: " + m;
+          say(nice); btn.disabled = false; btn.textContent = "Send rapport";
+        }
         break;
       }
       case "marksent": j.status = "sendt"; j.sentAt = Date.now(); j.sentTo = j.sendTo != null ? j.sendTo : S.settings.email; touch(j.id); toast("Markert som sendt"); S.keepScroll = true; render(); break;
