@@ -188,6 +188,10 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
 
 .preview { background: var(--sunk); border: 1px solid var(--line); border-radius: 8px; padding: 14px; font: 500 13px/1.5 var(--f-mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 420px; overflow: auto; }
 .hint { font-size: 14px; color: var(--muted); margin: 0; }
+.addgrp { border: 1px dashed var(--line); border-radius: 8px; padding: 8px 12px; display: grid; gap: 8px; }
+.addgrp summary { cursor: pointer; font-weight: 600; color: var(--muted); padding: 4px 0; }
+.addgrp[open] summary { color: var(--ink); }
+.form.form3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .mailframe { width: 100%; height: 640px; border: 1px solid var(--line); border-radius: 8px; background: #eef1ec; display: block; }
 details summary { cursor: pointer; padding: 4px 0; }
 .toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-weight: 600; z-index: 20; max-width: calc(100% - 32px); }
@@ -219,7 +223,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-12.9";
+  const APP_VERSION = "2026-10-12.10";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -348,7 +352,13 @@ details summary { cursor: pointer; padding: 4px 0; }
         { k: "e2", l: "Ende 2 (innsats)", w: 2, cat: true, lsrc: ["e1", "e2"] },
         { k: "hylse", l: "Hylse", w: 2, ph: "65125-06", cat: true },
         { k: "bar", l: "Trykk (bar)", w: 2, num: true },
-        { k: "note", l: "Merknad", w: 4 }
+        { k: "note", l: "Merknad", w: 4 },
+        { k: "a1", l: "Add A", w: 1, cat: true, group: "add", end: 1 },
+        { k: "b1", l: "Add B", w: 1, cat: true, group: "add", end: 1 },
+        { k: "c1", l: "Add C", w: 1, cat: true, group: "add", end: 1 },
+        { k: "a2", l: "Add A", w: 1, cat: true, group: "add", end: 2 },
+        { k: "b2", l: "Add B", w: 1, cat: true, group: "add", end: 2 },
+        { k: "c2", l: "Add C", w: 1, cat: true, group: "add", end: 2 }
       ],
       keep: ["sted", "type", "hylse", "bar"]
     },
@@ -765,8 +775,15 @@ details summary { cursor: pointer; padding: 4px 0; }
   function isTyping() { const a = document.activeElement; return a && /INPUT|TEXTAREA|SELECT/.test(a.tagName); }
 
   // ---------- derived ----------
+  // Add parts per hose end (adapters etc.), in the order A, B, C for end 1 then end 2.
+  const ADD_KEYS = ["a1", "b1", "c1", "a2", "b2", "c2"];
+  function addText(h) {
+    const end = (e) => ["a", "b", "c"].map((x) => h[x + e]).filter(Boolean).join(" + ");
+    const e1 = end(1), e2 = end(2);
+    return e1 || e2 ? `Add ${e1 || "–"} / ${e2 || "–"}` : "";
+  }
   function hoseSums(job) {
-    const byType = {}, ends = {}, ferr = {};
+    const byType = {}, ends = {}, ferr = {}, adds = {};
     let count = 0;
     for (const h of job.hoses || []) {
       const q = num(h.qty) || 1;
@@ -776,8 +793,9 @@ details summary { cursor: pointer; padding: 4px 0; }
       byType[t].n += q; byType[t].mm += num(h.len) * q;
       for (const e of [h.e1, h.e2]) if (e) ends[e] = (ends[e] || 0) + q;
       if (h.hylse) ferr[h.hylse] = (ferr[h.hylse] || 0) + 2 * q;
+      for (const k of ADD_KEYS) if (h[k]) adds[h[k]] = (adds[h[k]] || 0) + q;
     }
-    return { byType, ends, ferr, count };
+    return { byType, ends, ferr, adds, count };
   }
   function hourSums(job) {
     const by = {}; let tot = 0;
@@ -825,6 +843,7 @@ details summary { cursor: pointer; padding: 4px 0; }
         parts.push(`${h.type || "?"}  ${nf(h.len, 0)} mm x${num(h.qty) || 1}`);
         if (h.e1 || h.e2) parts.push(`${h.e1 || "-"} / ${h.e2 || "-"}`);
         if (h.hylse) parts.push("Hylse " + h.hylse);
+        if (addText(h)) parts.push(addText(h));
         if (h.bar) parts.push(h.bar + " bar");
         if (h.note) parts.push(h.note);
         line(parts.join(" | "));
@@ -833,6 +852,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       for (const [t, v] of Object.entries(s.byType)) line(`  ${withName(t)}: ${v.n} stk, ${nf(v.mm / 1000, 2)} m`);
       if (Object.keys(s.ends).length) { line("Innsatser:"); for (const [t, n] of Object.entries(s.ends)) line(`  ${withName(t)}: ${n} stk`); }
       if (Object.keys(s.ferr).length) { line("Hylser:"); for (const [t, n] of Object.entries(s.ferr)) line(`  ${withName(t)}: ${n} stk`); }
+      if (Object.keys(s.adds).length) { line("Add-deler:"); for (const [t, n] of Object.entries(s.adds)) line(`  ${withName(t)}: ${n} stk`); }
     }
     if ((job.items || []).length) {
       hr(); line("MATERIELL:");
@@ -901,12 +921,13 @@ details summary { cursor: pointer; padding: 4px 0; }
 
     // Hoses
     if ((job.hoses || []).length) {
-      const rows = job.hoses.map((h) => `<tr>${td(`<b>${e(h.pos || "–")}</b>`, "white-space:nowrap;")}${td(`<b>${e(h.type)}</b>${small(e([katName(h.type), h.sted].filter(Boolean).join(" · ")))}`)}${td(`${e(nf(h.len, 0))} mm${num(h.qty) > 1 ? ` × ${e(h.qty)}` : ""}`, R)}${td(`${e(h.e1 || "–")} / ${e(h.e2 || "–")}${small(e([h.hylse && "Hylse " + h.hylse, h.bar && h.bar + " bar"].filter(Boolean).join(" · ")))}`)}${td(e(h.note || ""))}</tr>`).join("");
+      const rows = job.hoses.map((h) => `<tr>${td(`<b>${e(h.pos || "–")}</b>`, "white-space:nowrap;")}${td(`<b>${e(h.type)}</b>${small(e([katName(h.type), h.sted].filter(Boolean).join(" · ")))}`)}${td(`${e(nf(h.len, 0))} mm${num(h.qty) > 1 ? ` × ${e(h.qty)}` : ""}`, R)}${td(`${e(h.e1 || "–")} / ${e(h.e2 || "–")}${small(e([h.hylse && "Hylse " + h.hylse, addText(h), h.bar && h.bar + " bar"].filter(Boolean).join(" · ")))}`)}${td(e(h.note || ""))}</tr>`).join("");
       let inner = table(th("Pos") + th("Slange / sted") + th("Lengde", R) + th("Ender / hylse") + th("Merknad"), rows);
       const mat = [];
       for (const [t, v] of Object.entries(s.byType)) mat.push([t, katName(t) || "Slange", nf(v.mm / 1000, 2) + " m"]);
       for (const [t, n] of Object.entries(s.ferr)) mat.push([t, katName(t) || "Hylse", n + " stk"]);
       for (const [t, n] of Object.entries(s.ends)) mat.push([t, katName(t) || "Innsats", n + " stk"]);
+      for (const [t, n] of Object.entries(s.adds)) mat.push([t, katName(t) || "Add", n + " stk"]);
       inner += `<div style="${F}font-size:12px;font-weight:700;color:${MUT};text-transform:uppercase;letter-spacing:.05em;margin:14px 0 6px">Materiell til slangene</div>` +
         table(th("Varenr.") + th("Beskrivelse") + th("Antall", R), mat.map(([a, b, c]) => `<tr>${td(`<span style="font-family:Consolas,monospace;font-size:13px">${e(a)}</span>`, "white-space:nowrap;")}${td(e(b))}${td(`<b>${e(c)}</b>`, R)}</tr>`).join(""));
       out.push(section(`Slanger (${s.count} stk)`, inner));
@@ -978,7 +999,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     const prod = [];
     for (const h of job.hoses || []) {
       const n = Math.max(1, Math.round(num(h.qty) || 1));
-      for (let k = 1; k <= n; k++) prod.push({ id: n > 1 ? `${h.pos || ""}.${k}` : String(h.pos || ""), type: h.type || "", len: num(h.len), f1: h.hylse || "", f2: h.hylse || "", i1: h.e1 || "", i2: h.e2 || "", sub: h.sted || "", bar: h.bar || "", note: h.note || "" });
+      for (let k = 1; k <= n; k++) prod.push({ id: n > 1 ? `${h.pos || ""}.${k}` : String(h.pos || ""), type: h.type || "", len: num(h.len), f1: h.hylse || "", f2: h.hylse || "", i1: h.e1 || "", i2: h.e2 || "", adds: ADD_KEYS.map((k) => h[k] || ""), sub: h.sted || "", bar: h.bar || "", note: h.note || "" });
     }
     const measured = prod.slice();
     prod.sort((a, b) => typeCompare(a.type, b.type) || a.len - b.len || String(a.i1).localeCompare(String(b.i1)) || String(a.i2).localeCompare(String(b.i2)));
@@ -994,7 +1015,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       const cell = src.getCell(1, i + 1); cell.value = t; cell.font = { bold: true }; cell.fill = fill(i >= 4 && i <= 5 ? FILL.ferr : i >= 6 && i <= 13 ? FILL.ins : FILL.hose); cell.border = box;
     });
     measured.forEach((p, idx) => {
-      const vals = [p.id, p.type ? `${p.type} x ${nf(p.len, 0).replace(/\s/g, "")} mm` : "", p.type, p.len, p.f1, p.f2, p.i1, p.i2, "", "", "", "", "", "", p.sub, String(p.bar || ""), p.note];
+      const vals = [p.id, p.type ? `${p.type} x ${nf(p.len, 0).replace(/\s/g, "")} mm` : "", p.type, p.len, p.f1, p.f2, p.i1, p.i2, ...p.adds, p.sub, String(p.bar || ""), p.note];
       vals.forEach((v, i) => {
         const cell = src.getCell(idx + 2, i + 1);
         if (i !== 3) { cell.numFmt = "@"; cell.value = String(v == null ? "" : v); } else cell.value = v;
@@ -1007,11 +1028,12 @@ details summary { cursor: pointer; padding: 4px 0; }
 
     // ---- Summary ----
     const sum = wb.addWorksheet("Summary");
-    const byType = {}, ferr = {}, ins = {};
+    const byType = {}, ferr = {}, ins = {}, addc = {};
     for (const p of prod) {
       if (p.type) byType[p.type] = (byType[p.type] || 0) + p.len;
       for (const f of [p.f1, p.f2]) if (f) ferr[f] = (ferr[f] || 0) + 1;
       for (const i of [p.i1, p.i2]) if (i) ins[i] = (ins[i] || 0) + 1;
+      for (const a of p.adds) if (a) addc[a] = (addc[a] || 0) + 1;
     }
     const block = (col, head, rows, color, meters) => {
       const c = (o) => String.fromCharCode(col.charCodeAt(0) + o);
@@ -1032,9 +1054,10 @@ details summary { cursor: pointer; padding: 4px 0; }
     block("A", "Slangetype", sorted(byType, true), FILL.hose, true);
     block("E", "Hylse", sorted(ferr), FILL.ferr, false);
     block("H", "Innsats", sorted(ins), FILL.ins, false);
-    [["A", 14], ["B", 18], ["C", 17], ["D", 3], ["E", 14], ["F", 9], ["G", 3], ["H", 16], ["I", 9]].forEach(([k, w]) => (sum.getColumn(k).width = w));
+    if (Object.keys(addc).length) block("K", "Add", sorted(addc), "FFFCE4D6", false);
+    [["A", 14], ["B", 18], ["C", 17], ["D", 3], ["E", 14], ["F", 9], ["G", 3], ["H", 16], ["I", 9], ["J", 3], ["K", 16], ["L", 9]].forEach(([k, w]) => (sum.getColumn(k).width = w));
     // Job details under the blocks, so the printout says which order it belongs to.
-    const infoRow = Math.max(Object.keys(byType).length, Object.keys(ferr).length, Object.keys(ins).length) + 4;
+    const infoRow = Math.max(Object.keys(byType).length, Object.keys(ferr).length, Object.keys(ins).length, Object.keys(addc).length) + 4;
     [["Kunde", job.kunde], ["Oppdrag", job.beskrivelse], ["Fartøy / lokasjon", job.sted], ["Kundens ref.", job.ref], ["PO-nummer", job.po], ["Dato", fmtDate(job.dato)]].filter(([, v]) => v).forEach(([k, v], i) => {
       const a = sum.getCell("A" + (infoRow + i)); a.value = k; a.font = { bold: true, color: { argb: "FF5E6A60" } };
       const bcell = sum.getCell("B" + (infoRow + i)); bcell.numFmt = "@"; bcell.value = String(v);
@@ -1054,7 +1077,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     ws.getRow(1).height = 22;
     prod.forEach((p, idx) => {
       const r = idx + 2;
-      [p.id, p.type, p.len, p.f1, p.f2, p.i1, p.i2, "", "", "", "", "", "", p.sub].forEach((v, i) => {
+      [p.id, p.type, p.len, p.f1, p.f2, p.i1, p.i2, ...p.adds, p.sub].forEach((v, i) => {
         const cell = ws.getCell(r, i + 1);
         if (i !== 2) { cell.numFmt = "@"; cell.value = String(v); } else cell.value = v;
         cell.border = box; cell.alignment = { vertical: "middle" };
@@ -1080,6 +1103,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     for (const [t, v] of Object.entries(s.byType)) rows.push(["Slange", t, katName(t) || "Slange", nf(v.mm / 1000, 2), "m", ""]);
     for (const [t, n] of Object.entries(s.ferr)) rows.push(["Hylse", t, katName(t) || "Hylse", n, "stk", ""]);
     for (const [t, n] of Object.entries(s.ends)) rows.push(["Innsats", t, katName(t) || "Innsats", n, "stk", ""]);
+    for (const [t, n] of Object.entries(s.adds)) rows.push(["Add", t, katName(t) || "Add", n, "stk", ""]);
     for (const g of groupItems(job.items)) for (const { r } of g.rows) rows.push([g.label, r.nr || "", r.desc || katName(r.nr), qtyStr(r.qty), r.unit || "stk", r.note || ""]);
     for (const [k, v] of Object.entries(hourSums(job).by)) rows.push(["Timer", k, "Arbeid " + k, nf(v / 60, 2), "t", ""]);
     return "﻿" + rows.map((r) => r.map(q).join(";")).join("\r\n");
@@ -1305,7 +1329,11 @@ details summary { cursor: pointer; padding: 4px 0; }
     const base = editing ? rows[editing.idx] : formDefaults(j, m);
     const fields = def.fields.map((f) => Object.assign({ mod: m }, f));
     const extra = m === "hours" ? `<div class="prev" id="hours-prev" aria-live="polite">${hoursPreview(base && base.from, base && base.to, base && base.date)}</div>` : "";
-    const form = `<form class="panel" data-mod="${m}" id="form-${m}"><h2>${editing ? "Endre rad" : def.add}</h2><div class="form">${fields.map((f) => fieldHtml(f, base ? base[f.k] : "", m + "-")).join("")}</div>${extra}
+    const main = fields.filter((f) => !f.group), group = fields.filter((f) => f.group === "add");
+    const addOpen = group.some((f) => base && base[f.k]);
+    const addHtml = group.length ? `<details class="addgrp"${addOpen ? " open" : ""}><summary>Add-deler (ende 1 og 2)</summary>
+        ${[1, 2].map((e) => `<div class="label">Ende ${e}</div><div class="form form3">${group.filter((f) => f.end === e).map((f) => fieldHtml(f, base ? base[f.k] : "", m + "-")).join("")}</div>`).join("")}</details>` : "";
+    const form = `<form class="panel" data-mod="${m}" id="form-${m}"><h2>${editing ? "Endre rad" : def.add}</h2><div class="form">${main.map((f) => fieldHtml(f, base ? base[f.k] : "", m + "-")).join("")}</div>${addHtml}${extra}
       <div class="row"><button class="btn ${editing ? "dark" : "primary"}" type="submit">${editing ? "Lagre endring" : "+ " + def.add}</button>${editing ? `<button class="btn ghost" type="button" data-a="canceledit">Avbryt</button>` : ""}</div></form>`;
     let list;
     if (!rows.length) list = `<p class="hint">Ingenting registrert ennå.</p>`;
@@ -1335,7 +1363,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     if (m === "hoses") {
       tag = esc(r.pos || "–");
       main = `<strong>${esc(r.type)}</strong>${katName(r.type) ? ` <span class="d">${esc(katName(r.type))}</span>` : ""} · <span class="num">${nf(r.len, 0)} mm</span>${num(r.qty) > 1 ? ` <span class="num">×${esc(r.qty)}</span>` : ""}
-        <div class="d">${esc([r.sted, (r.e1 || r.e2) && (r.e1 || "–") + " / " + (r.e2 || "–"), r.hylse && "Hylse " + r.hylse, r.bar && r.bar + " bar", r.note].filter(Boolean).join(" · "))}</div>`;
+        <div class="d">${esc([r.sted, (r.e1 || r.e2) && (r.e1 || "–") + " / " + (r.e2 || "–"), r.hylse && "Hylse " + r.hylse, addText(r), r.bar && r.bar + " bar", r.note].filter(Boolean).join(" · "))}</div>`;
     } else if (m === "items") {
       tag = `<span class="num">${qtyStr(r.qty)}</span>`;
       main = `<strong>${esc(itemName(r))}</strong> <span class="d">${esc(r.unit || "stk")}</span><div class="d">${esc([r.nr && r.nr !== itemName(r) ? r.nr : "", r.note].filter(Boolean).join(" · "))}</div>`;
@@ -1356,7 +1384,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       const s = hoseSums(j);
       const tiles = Object.entries(s.byType).map(([t, v]) => `<div class="tot"><div class="v">${nf(v.mm / 1000, 2)} m</div><div class="k">${esc(withName(t))} · ${v.n} stk</div></div>`).join("");
       const tbl = (title, o) => Object.keys(o).length ? `<div><span class="label">${title}</span><table class="sumtable">${Object.entries(o).map(([k, n]) => `<tr><td>${esc(withName(k))}</td><td>${n} stk</td></tr>`).join("")}</table></div>` : "";
-      return `<div class="totals">${tiles}</div>${tbl("Innsatser", s.ends)}${tbl("Hylser (2 per slange)", s.ferr)}`;
+      return `<div class="totals">${tiles}</div>${tbl("Innsatser", s.ends)}${tbl("Hylser (2 per slange)", s.ferr)}${tbl("Add-deler", s.adds)}`;
     }
     if (m === "hours" && (j.hours || []).length) {
       const h = hourSums(j);
