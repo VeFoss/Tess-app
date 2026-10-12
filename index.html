@@ -428,8 +428,8 @@ details summary { cursor: pointer; padding: 4px 0; }
       const id = "job-v4-" + o.id;
       if (S.jobs[id]) continue;
       S.jobs[id] = {
-        type: "job", id, jtype: o.type || "felt", kunde: o.kunde || "", beskrivelse: o.navn || "", ordrenr: o.ordrenr || "", ref: o.kref || "",
-        sted: o.lokasjon || "", kontakt: "", dato: o.dato || "", utfort: "", status: "aktiv", hoses: [], notes: "",
+        type: "job", id, jtype: o.type || "felt", kunde: o.kunde || "", beskrivelse: o.navn || "", ref: o.kref || "",
+        sted: o.lokasjon || "", dato: o.dato || "", utfort: "", status: "aktiv", hoses: [], notes: "",
         items: (o.varer || []).map((v) => { const code = /^[A-Z0-9][A-Z0-9\-\/.]*$/i.test(String(v.navn || "").trim()); return { nr: code ? v.navn : "", desc: code ? "" : v.navn, qty: String(v.antall || 1), unit: v.enhet || "stk", note: v.komm || "" }; }),
         hours: (o.timer || []).map((t) => ({ date: t.dato || "", from: t.fra, to: t.til, min: t.min, kode: t.kode || timekode(t.fra, t.dato), tech: "", desc: t.komm || "" })),
         created: typeof o.id === "number" ? o.id : Date.now(), updated: typeof o.id === "number" ? o.id : Date.now()
@@ -729,9 +729,8 @@ details summary { cursor: pointer; padding: 4px 0; }
     line("=".repeat(40));
     line("Kunde:          " + (job.kunde || ""));
     if (job.sted) line("Lokasjon:       " + job.sted);
-    if (job.kontakt) line("Kontaktperson:  " + job.kontakt);
-    if (job.ordrenr) line("Ordrenr.:       " + job.ordrenr);
-    if (job.ref) line("Kundens ref/PO: " + job.ref);
+    if (job.ref) line("Kundens ref.:   " + job.ref);
+    if (job.po) line("PO-nummer:      " + job.po);
     line("Dato:           " + fmtDate(job.dato));
     if (job.utfort) line("Utført av:      " + job.utfort);
 
@@ -806,7 +805,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       <div style="margin-top:10px">${badge(JTYPES[job.jtype || "felt"] || "Felt", G, "#e2f1e2")}${badge(STATUS[st], st === "aktiv" ? "#3a6d8e" : G, st === "aktiv" ? "#e3eef5" : "#e2f1e2")}</div></td></tr>`);
 
     // Key facts
-    const facts = [["Lokasjon", job.sted], ["Kontaktperson", job.kontakt], ["Vårt ordrenr.", job.ordrenr], ["Kundens ref. / PO", job.ref], ["Dato", fmtDate(job.dato)], ["Utført av", job.utfort]].filter(([, v]) => v);
+    const facts = [["Lokasjon", job.sted], ["Kundens ref.", job.ref], ["PO-nummer", job.po], ["Dato", fmtDate(job.dato)], ["Utført av", job.utfort]].filter(([, v]) => v);
     if (facts.length) {
       const cells = facts.map(([k, v]) => `<td width="50%" style="${F}padding:8px 0;vertical-align:top"><div style="font-size:11px;color:${MUT};text-transform:uppercase;letter-spacing:.05em">${k}</div><div style="font-size:15px;color:${INK};margin-top:2px">${e(v)}</div></td>`);
       let rows = ""; for (let i = 0; i < cells.length; i += 2) rows += `<tr>${cells[i]}${cells[i + 1] || "<td></td>"}</tr>`;
@@ -917,7 +916,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     const list = all
       .filter((j) => S.filter === "alle" || (S.filter === "aktive" ? j.status !== "sendt" : j.status === "sendt"))
       .filter((j) => S.tfilter === "alle" || (j.jtype || "felt") === S.tfilter)
-      .filter((j) => !q || [j.kunde, j.sted, j.ref, j.ordrenr, j.beskrivelse, j.kontakt].join(" ").toLowerCase().includes(q))
+      .filter((j) => !q || [j.kunde, j.sted, j.ref, j.po, j.beskrivelse].join(" ").toLowerCase().includes(q))
       .sort((a, b) => (b.updated || 0) - (a.updated || 0));
     const nActive = all.filter((j) => j.status !== "sendt").length;
     let body;
@@ -929,7 +928,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       `<main>${modeBanner()}
       <div class="pagehead"><h2>Jobber</h2><button class="btn primary" data-a="new">+ Ny jobb</button></div>
       ${chips("tfilter", S.tfilter, [["alle", "Alle"], ["felt", "Felt"], ["butikk", "Butikk"], ["verksted", "Verksted"]])}
-      <div class="toolbar"><input id="q" class="search" type="search" placeholder="Søk kunde, sted, ordrenr …" value="${esc(S.q)}" aria-label="Søk i jobber"></div>
+      <div class="toolbar"><input id="q" class="search" type="search" placeholder="Søk kunde, sted, ref, PO …" value="${esc(S.q)}" aria-label="Søk i jobber"></div>
       ${chips("filter", S.filter, [["aktive", "Pågår / ferdig"], ["sendt", "Sendt"], ["alle", "Alle"]])}
       ${body}</main>`;
   }
@@ -941,7 +940,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     const st = j.status || "aktiv", jt = j.jtype || "felt";
     return `<button class="jobcard ${st}" data-a="open" data-id="${esc(j.id)}">
       <span class="stripe"></span>
-      <span class="grow"><span class="jt">${esc(j.kunde || "Uten kunde")}${j.example ? ' <span class="ex">Eksempel</span>' : ""}</span><span class="meta">${esc([j.beskrivelse, j.sted, fmtDate(j.dato), j.ordrenr && "Ordre " + j.ordrenr].filter(Boolean).join(" · "))}</span></span>
+      <span class="grow"><span class="jt">${esc(j.kunde || "Uten kunde")}${j.example ? ' <span class="ex">Eksempel</span>' : ""}</span><span class="meta">${esc([j.beskrivelse, j.sted, fmtDate(j.dato), j.po && "PO " + j.po].filter(Boolean).join(" · "))}</span></span>
       <span class="pill ${st}">${STATUS[st]}</span>
       <span class="stats"><span class="tb ${jt}">${JTYPES[jt]}</span>${s.count ? `<span><b class="num">${s.count}</b> slanger</span>` : ""}${(j.items || []).length ? `<span><b class="num">${j.items.length}</b> varer</span>` : ""}${h.tot ? `<span><b class="num">${fmtMin(h.tot)}</b></span>` : ""}${(() => { const n = jobOrders(j.id).filter((o) => o.status !== "mottatt").length; return n ? `<span><b class="num">${n}</b> til bestilling</span>` : ""; })()}</span>
     </button>`;
@@ -999,11 +998,10 @@ details summary { cursor: pointer; padding: 4px 0; }
       { k: "kunde", l: "Kunde", w: 4, bind: true, ph: "Equinor, DeepOcean, Privat …" },
       { k: "beskrivelse", l: "Oppdrag", w: 4, bind: true, ph: "F.eks. Slangebytte kran 3" },
       { k: "sted", l: "Fartøy / lokasjon", w: 2, bind: true, ph: "Normand Cutter, Karmøy base …" },
-      { k: "kontakt", l: "Kontaktperson", w: 2, bind: true },
-      { k: "ordrenr", l: "Vårt ordrenr.", w: 2, bind: true },
-      { k: "ref", l: "Kundens ref. / PO", w: 2, bind: true },
+      { k: "ref", l: "Kundens ref.", w: 2, bind: true },
+      { k: "po", l: "PO-nummer", w: 2, bind: true },
       { k: "dato", l: "Dato", w: 2, bind: true, type: "date" },
-      { k: "utfort", l: "Utført av", w: 2, bind: true, ph: "Navn på teknikere" }
+      { k: "utfort", l: "Utført av", w: 4, bind: true, ph: "Navn på teknikere" }
     ];
     const st = j.status || "aktiv", jt = j.jtype || "felt";
     return `<section class="panel"><h2>Jobb og kunde</h2>
@@ -1167,9 +1165,9 @@ details summary { cursor: pointer; padding: 4px 0; }
   // ---------- actions ----------
   function newJob(example) {
     const id = "job-" + uid8();
-    const j = { type: "job", id, jtype: S.tfilter !== "alle" ? S.tfilter : "felt", kunde: "", kontakt: "", sted: "", ordrenr: "", ref: "", dato: today(), utfort: S.settings.tech || "", beskrivelse: "", status: "aktiv", hoses: [], items: [], hours: [], notes: "", created: Date.now(), updated: Date.now() };
+    const j = { type: "job", id, jtype: S.tfilter !== "alle" ? S.tfilter : "felt", kunde: "", sted: "", ref: "", po: "", dato: today(), utfort: S.settings.tech || "", beskrivelse: "", status: "aktiv", hoses: [], items: [], hours: [], notes: "", created: Date.now(), updated: Date.now() };
     if (example) Object.assign(j, {
-      example: true, jtype: "felt", kunde: "Eksempel Rederi AS", kontakt: "Kari Maskinsjef", sted: "MS Eksempel, kai 4", ordrenr: "100234", ref: "PO-1234",
+      example: true, jtype: "felt", kunde: "Eksempel Rederi AS", sted: "MS Eksempel, kai 4", ref: "Kari Maskinsjef", po: "PO-1234",
       beskrivelse: "Slangebytte dekkskran",
       hoses: [
         { pos: "1", sted: "Dekkskran, hovedsylinder", type: "5256-08", len: "1250", qty: "2", e1: "DKOL M22", e2: "DKOL 90° M22", hylse: "65125-08", bar: "250", note: "" },
