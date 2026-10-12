@@ -148,6 +148,7 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
 button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
 .tb { font: 600 12px var(--f-body); padding: 2px 8px; border-radius: 4px; background: var(--tint); color: var(--brand); }
 .tb.butikk { background: color-mix(in srgb, var(--plum) 14%, transparent); color: var(--plum); }
+.tb.person { background: color-mix(in srgb, var(--steel) 14%, transparent); color: var(--steel); }
 .tb.verksted { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
 
 .empty { text-align: center; padding: 40px 16px; display: grid; gap: 12px; justify-items: center; color: var(--muted); }
@@ -216,7 +217,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-12.2";
+  const APP_VERSION = "2026-10-12.3";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -393,7 +394,8 @@ details summary { cursor: pointer; padding: 4px 0; }
   const STATUS = { aktiv: "Pågår", ferdig: "Ferdig", sendt: "Sendt" };
 
   // ---------- state ----------
-  const S = { jobs: {}, orders: [], ordersUpdated: 0, settings: { type: "settings", email: "", tech: "" }, view: "list", home: "jobs", jobId: null, tab: "info", filter: "aktive", tfilter: "alle", ofilter: "alle", q: "", edit: null, mode: "loading", saveState: "", armed: null };
+  const S = { jobs: {}, orders: [], ordersUpdated: 0, settings: { type: "settings", email: "", tech: "" }, view: "list", home: "jobs", jobId: null, tab: "info", filter: "aktive", tfilter: "alle", ofilter: "alle", ufilter: "alle", q: "", edit: null, mode: "loading", saveState: "", armed: null,
+    profiles: [], isAdmin: false, ownerOf: {}, moveFrom: {} };
   let col = null, downloads = null;
   const dirty = new Set(), timers = {}, inflight = {}, again = {};
 
@@ -405,7 +407,11 @@ details summary { cursor: pointer; padding: 4px 0; }
     lsSet(prefix + "jobs", JSON.stringify(S.jobs));
     lsSet(prefix + "orders", JSON.stringify({ list: S.orders, updated: S.ordersUpdated }));
     lsSet(prefix + "settings", JSON.stringify(S.settings));
-    if (prefix !== "jobbkort.") lsSet(prefix + "pending", JSON.stringify([...pending]));
+    if (prefix !== "jobbkort.") {
+      lsSet(prefix + "pending", JSON.stringify([...pending]));
+      lsSet(prefix + "moves", JSON.stringify({ ownerOf: S.ownerOf, moveFrom: S.moveFrom }));
+      lsSet(prefix + "profiles", JSON.stringify(S.profiles));
+    }
   }
   function loadLocal() {
     S.jobs = {}; S.orders = []; S.ordersUpdated = 0; S.settings = { type: "settings", email: "", tech: "" };
@@ -417,6 +423,25 @@ details summary { cursor: pointer; padding: 4px 0; }
     try { const s = JSON.parse(lsGet(prefix + "settings") || "null"); if (s) S.settings = Object.assign(S.settings, s); } catch (e) {}
     pending.clear();
     try { for (const id of JSON.parse(lsGet(prefix + "pending") || "[]")) pending.add(id); } catch (e) {}
+    S.ownerOf = {}; S.moveFrom = {}; S.profiles = [];
+    try { const m = JSON.parse(lsGet(prefix + "moves") || "null"); if (m) { S.ownerOf = m.ownerOf || {}; S.moveFrom = m.moveFrom || {}; } } catch (e) {}
+    try { const p = JSON.parse(lsGet(prefix + "profiles") || "[]"); if (Array.isArray(p)) S.profiles = p; } catch (e) {}
+    moveJobOrders();
+  }
+  // Orders used to live in one list per user with a jobId. They now live inside each job so whoever the job
+  // belongs to sees them. Move any old ones across (also when an older app version on another device adds some).
+  function moveJobOrders() {
+    let moved = false;
+    const keep = [];
+    for (const o of S.orders) {
+      const job = o.jobId && S.jobs[o.jobId];
+      if (!job) { keep.push(o); continue; }
+      job.orders = job.orders || [];
+      if (!job.orders.some((x) => x.id === o.id)) job.orders.unshift(Object.assign({}, o));
+      job.updated = Date.now(); pending.add(job.id); moved = true;
+    }
+    if (moved) { S.orders = keep; S.ordersUpdated = Date.now(); pending.add("orders"); }
+    return moved;
   }
   // One-time import from the earlier Tess Mobilservice app (same site, key tess_v4). The old data is left in place.
   function migrateOld() {
@@ -536,6 +561,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     prefix = "jobbkort.u." + user.id + ".";
     const fresh = lsGet(prefix + "jobs") == null;
     loadLocal();
+    S.isAdmin = !!(S.profiles.find((p) => p.user_id === user.id) || {}).is_admin;
     let imported = 0;
     if (fresh && !lsGet("jobbkort.adopted")) {
       // First sign-in on this device: take over what was stored here before sync existed.
@@ -553,6 +579,22 @@ details summary { cursor: pointer; padding: 4px 0; }
     syncNow();
   }
   function schedulePush() { clearTimeout(pushT); setSave("saving"); pushT = setTimeout(syncNow, 1200); }
+  // People list (for assigning jobs) and my own entry in it. Fails quietly if the profiles table is not set up yet.
+  async function syncProfiles() {
+    try {
+      const { data, error } = await sb.from("profiles").select("user_id,email,name,is_admin");
+      if (error || !Array.isArray(data)) return;
+      S.profiles = data;
+      const me = data.find((p) => p.user_id === sbUser.id);
+      const wasAdmin = S.isAdmin;
+      S.isAdmin = !!(me && me.is_admin);
+      const name = (S.settings.tech || "").trim(), email = sbUser.email || "";
+      if (!me || (name && me.name !== name) || me.email !== email) {
+        await sb.from("profiles").upsert({ user_id: sbUser.id, email, name: name || (me && me.name) || "" }, { onConflict: "user_id" });
+      }
+      if (wasAdmin !== S.isAdmin && !isTyping()) { S.keepScroll = true; render(); }
+    } catch (e) {}
+  }
   async function syncNow() {
     if (!sb || !sbUser) return;
     if (syncing) { syncAgain = true; return; }
@@ -562,20 +604,33 @@ details summary { cursor: pointer; padding: 4px 0; }
     try {
       const ids = [...pending];
       if (ids.length) {
-        const sent = {};
-        const rows = ids.map((id) => {
+        const sent = {}, rows = [];
+        for (const id of ids) {
           const b = docBody(id);
           const updated = (b && b.updated) || Date.now();
           sent[id] = updated;
-          return { user_id: sbUser.id, id, data: b ? clone(b) : {}, updated, deleted: !b };
-        });
+          const shared = id === "settings" || id === "orders";
+          // A job is stored under the person it is assigned to; settings and general orders under me.
+          const owner = shared ? sbUser.id : b ? ownerOf(b) : S.ownerOf[id] || sbUser.id;
+          const data = b ? clone(b) : {};
+          if (b && !shared) delete data.owner;
+          rows.push({ user_id: owner, id, data, updated, deleted: !b });
+          // Reassigned: leave a deletion marker with the previous owner so it disappears from their list.
+          const from = !shared && S.moveFrom[id];
+          if (from && from !== owner) rows.push({ user_id: from, id, data: {}, updated, deleted: true });
+        }
         const { error } = await sb.from("docs").upsert(rows, { onConflict: "user_id,id" });
         if (error) throw error;
-        for (const id of ids) { const b = docBody(id); if (!dirty.has(id) && ((b && b.updated) || sent[id]) === sent[id]) pending.delete(id); }
+        for (const id of ids) {
+          const b = docBody(id);
+          if (!dirty.has(id) && ((b && b.updated) || sent[id]) === sent[id]) { pending.delete(id); delete S.moveFrom[id]; delete S.ownerOf[id]; }
+        }
       }
-      const { data, error } = await sb.from("docs").select("id,data,updated,deleted").range(0, 4999);
+      const { data, error } = await sb.from("docs").select("user_id,id,data,updated,deleted").range(0, 9999);
       if (error) throw error;
-      const changed = mergeRemote(data || []);
+      let changed = mergeRemote(data || []);
+      if (moveJobOrders()) changed = true;
+      await syncProfiles();
       saveLocal();
       setSave(pending.size ? "saving" : "synced");
       if (changed && !isTyping() && S.view !== "login" && S.view !== "newpass") { S.keepScroll = true; render(); }
@@ -589,8 +644,15 @@ details summary { cursor: pointer; padding: 4px 0; }
   }
   function mergeRemote(rows) {
     let changed = false;
-    const seen = new Set();
+    const seen = new Set(), best = {};
+    // The administrator sees everyone's rows. Settings and general orders are per person, so only mine count;
+    // for a job that was reassigned there can be a live row and a deletion marker, and the live one wins.
     for (const r of rows) {
+      if ((r.id === "settings" || r.id === "orders") && r.user_id !== sbUser.id) continue;
+      const b = best[r.id], up = Number(r.updated) || 0;
+      if (!b || (b.deleted && !r.deleted) || (b.deleted === r.deleted && up > (Number(b.updated) || 0))) best[r.id] = r;
+    }
+    for (const r of Object.values(best)) {
       seen.add(r.id);
       if (pending.has(r.id) || dirty.has(r.id)) continue;
       const up = Number(r.updated) || 0;
@@ -598,7 +660,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       if (r.id === "orders") { if (!r.deleted && up > (S.ordersUpdated || 0)) { S.orders = (r.data && r.data.list) || []; S.ordersUpdated = up; changed = true; } continue; }
       const cur = S.jobs[r.id];
       if (r.deleted) { if (cur) { delete S.jobs[r.id]; if (S.jobId === r.id) { S.view = "list"; S.jobId = null; } changed = true; } continue; }
-      if (!cur || up > (cur.updated || 0)) { S.jobs[r.id] = r.data; changed = true; }
+      if (!cur || up > (cur.updated || 0) || ownerOf(cur) !== r.user_id) { S.jobs[r.id] = Object.assign({}, r.data, { owner: r.user_id }); changed = true; }
     }
     // Anything here that the server has never seen gets uploaded.
     for (const id of Object.keys(S.jobs)) if (!seen.has(id)) pending.add(id);
@@ -652,7 +714,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   async function logout() {
     if (pending.size && sb && navigator.onLine) await syncNow();
     if (sb) { try { await sb.auth.signOut(); } catch (e) {} }
-    sbUser = null; prefix = "jobbkort."; S.jobs = {}; S.orders = []; pending.clear();
+    sbUser = null; prefix = "jobbkort."; S.jobs = {}; S.orders = []; S.profiles = []; S.isAdmin = false; pending.clear();
     lsSet("jobbkort.lastUser", "");
     S.view = "login"; render();
   }
@@ -904,7 +966,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     return `<header class="top"><div class="top-in">${left}<div class="grow"><div class="sub">${esc(sub)}</div><h1>${esc(title)}</h1></div><span id="savestate" class="savestate"></span>${right || ""}</div></header>`;
   }
   function homeTabs() {
-    const waiting = S.orders.filter((o) => o.status !== "mottatt").length;
+    const waiting = allOrders().filter(({ o }) => o.status !== "mottatt").length;
     const t = [["jobs", "Jobber", ""], ["orders", "Bestill", waiting ? String(waiting) : ""]];
     return `<nav class="tabs"><div class="tabs-in" role="tablist">${t.map(([k, l, c]) => `<button class="tab" role="tab" data-a="home" data-v="${k}" aria-selected="${S.home === k}">${ICONS[k]}<span>${l}</span>${c ? `<span class="c">${c}</span>` : ""}</button>`).join("")}</div></nav>`;
   }
@@ -918,7 +980,8 @@ details summary { cursor: pointer; padding: 4px 0; }
     const list = all
       .filter((j) => S.filter === "alle" || (S.filter === "aktive" ? j.status !== "sendt" : j.status === "sendt"))
       .filter((j) => S.tfilter === "alle" || (j.jtype || "felt") === S.tfilter)
-      .filter((j) => !q || [j.kunde, j.sted, j.ref, j.po, j.beskrivelse].join(" ").toLowerCase().includes(q))
+      .filter((j) => !S.isAdmin || S.ufilter === "alle" || ownerOf(j) === (S.ufilter === "meg" ? myId() : S.ufilter))
+      .filter((j) => !q || [j.kunde, j.sted, j.ref, j.po, j.beskrivelse, S.isAdmin ? personName(ownerOf(j)) : ""].join(" ").toLowerCase().includes(q))
       .sort((a, b) => (b.updated || 0) - (a.updated || 0));
     const nActive = all.filter((j) => j.status !== "sendt").length;
     let body;
@@ -929,6 +992,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     return header("", nActive ? nActive + (nActive === 1 ? " aktiv jobb" : " aktive jobber") : "Ingen aktiv jobb", "", `<button class="iconbtn" data-a="settings">Innstillinger</button>`) + homeTabs() +
       `<main>${modeBanner()}
       <div class="pagehead"><h2>Jobber</h2><button class="btn primary" data-a="new">+ Ny jobb</button></div>
+      ${S.isAdmin && S.profiles.length > 1 ? `<div class="fld"><span class="label">Tekniker</span>${chips("ufilter", S.ufilter, [["alle", "Alle"], ["meg", "Mine"]].concat(people().filter((p) => p.user_id !== myId()).map((p) => [p.user_id, p.name || p.email])))}</div>` : ""}
       ${chips("tfilter", S.tfilter, [["alle", "Alle"], ["felt", "Felt"], ["butikk", "Butikk"], ["verksted", "Verksted"]])}
       <div class="toolbar"><input id="q" class="search" type="search" placeholder="Søk kunde, sted, ref, PO …" value="${esc(S.q)}" aria-label="Søk i jobber"></div>
       ${chips("filter", S.filter, [["aktive", "Pågår / ferdig"], ["sendt", "Sendt"], ["alle", "Alle"]])}
@@ -937,6 +1001,13 @@ details summary { cursor: pointer; padding: 4px 0; }
   function modeBanner() {
     return S.mode === "local" && !STANDALONE ? `<div class="banner">Jobbene lagres bare i denne nettleseren på denne enheten. Åpne appen fra claude.ai mens du er innlogget for å lagre på kontoen din og få tilgang fra flere enheter.</div>` : "";
   }
+  // Who the job belongs to (for the administrator) or who assigned it (for the technician).
+  function who(j) {
+    const owner = ownerOf(j);
+    if (S.isAdmin && owner !== myId()) return `<span class="tb person">${esc(personName(owner))}</span>`;
+    if (!S.isAdmin && j.assignedBy && j.assignedBy !== myId()) return `<span class="tb person">Fra ${esc(personName(j.assignedBy))}</span>`;
+    return "";
+  }
   function jobCard(j) {
     const s = hoseSums(j), h = hourSums(j);
     const st = j.status || "aktiv", jt = j.jtype || "felt";
@@ -944,20 +1015,71 @@ details summary { cursor: pointer; padding: 4px 0; }
       <span class="stripe"></span>
       <span class="grow"><span class="jt">${esc(j.kunde || "Uten kunde")}${j.example ? ' <span class="ex">Eksempel</span>' : ""}</span><span class="meta">${esc([j.beskrivelse, j.sted, fmtDate(j.dato), j.po && "PO " + j.po].filter(Boolean).join(" · "))}</span></span>
       <span class="pill ${st}">${STATUS[st]}</span>
-      <span class="stats"><span class="tb ${jt}">${JTYPES[jt]}</span>${s.count ? `<span><b class="num">${s.count}</b> slanger</span>` : ""}${(j.items || []).length ? `<span><b class="num">${j.items.length}</b> varer</span>` : ""}${h.tot ? `<span><b class="num">${fmtMin(h.tot)}</b></span>` : ""}${(() => { const n = jobOrders(j.id).filter((o) => o.status !== "mottatt").length; return n ? `<span><b class="num">${n}</b> til bestilling</span>` : ""; })()}</span>
+      <span class="stats"><span class="tb ${jt}">${JTYPES[jt]}</span>${who(j)}${s.count ? `<span><b class="num">${s.count}</b> slanger</span>` : ""}${(j.items || []).length ? `<span><b class="num">${j.items.length}</b> varer</span>` : ""}${h.tot ? `<span><b class="num">${fmtMin(h.tot)}</b></span>` : ""}${(() => { const n = jobOrders(j.id).filter((o) => o.status !== "mottatt").length; return n ? `<span><b class="num">${n}</b> til bestilling</span>` : ""; })()}</span>
     </button>`;
   }
 
   const jobLabel = (id) => { const j = S.jobs[id]; return j ? [j.kunde || "Uten kunde", j.beskrivelse].filter(Boolean).join(" – ") : "Slettet jobb"; };
-  const jobOrders = (id) => S.orders.filter((o) => (o.jobId || "") === id);
+  // ---------- people ----------
+  const myId = () => (sbUser && sbUser.id) || "";
+  const ownerOf = (job) => (job && job.owner) || myId();
+  function personName(id) {
+    if (!id) return "";
+    if (id === myId()) return (S.settings.tech || "").trim() || "Meg";
+    const p = S.profiles.find((x) => x.user_id === id);
+    return p ? p.name || p.email || "Ukjent" : "Ukjent bruker";
+  }
+  const people = () => S.profiles.slice().sort((a, b) => (a.user_id === myId() ? -1 : b.user_id === myId() ? 1 : String(a.name || a.email).localeCompare(String(b.name || b.email))));
+  function assignJob(job, to) {
+    const from = ownerOf(job);
+    if (!to || to === from) return;
+    if (!S.moveFrom[job.id]) S.moveFrom[job.id] = from;
+    job.owner = to; job.assignedBy = myId(); job.assignedAt = Date.now();
+    touch(job.id);
+    if (to !== myId()) notifyAssigned(job, to);
+    else toast("Jobben er flyttet til deg");
+  }
+  // E-mail the person a job was assigned to, through the same send function as the reports.
+  async function notifyAssigned(job, to) {
+    const p = S.profiles.find((x) => x.user_id === to);
+    if (!p || !p.email || !sb) { toast("Jobben er tildelt " + personName(to)); return; }
+    const facts = [["Kunde", job.kunde], ["Oppdrag", job.beskrivelse], ["Fartøy / lokasjon", job.sted], ["Dato", fmtDate(job.dato)], ["Kundens ref.", job.ref], ["PO-nummer", job.po]].filter(([, v]) => v);
+    const link = siteUrl();
+    const text = `Hei ${p.name || ""}\n\n${personName(myId())} har tildelt deg en jobb i Tess Mobilservice.\n\n${facts.map(([k, v]) => k + ": " + v).join("\n")}\n\nÅpne appen: ${link}`;
+    const F = "font-family:Arial,Helvetica,sans-serif;";
+    const html = `<!doctype html><html lang="nb"><body style="margin:0;background:#eef1ec"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1ec"><tr><td align="center" style="padding:20px 10px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #dfe4dc">
+<tr><td style="background:#2b7a3b;padding:16px 24px"><div style="${F}color:#fff;font-size:24px;font-weight:900;letter-spacing:.03em">${esc(BRAND.name)}</div><div style="${F}color:#e2f1e2;font-size:10px;letter-spacing:.12em;margin-top:3px">${esc(BRAND.tag)}</div></td></tr>
+<tr><td style="padding:22px 24px 6px"><div style="${F}font-size:12px;color:#5e6a60;text-transform:uppercase;letter-spacing:.08em">Ny jobb tildelt deg</div><h1 style="${F}margin:6px 0 4px;font-size:22px;color:#1b211c">${esc(job.kunde || "Ny jobb")}</h1>${job.beskrivelse ? `<div style="${F}font-size:16px;color:#1b211c">${esc(job.beskrivelse)}</div>` : ""}</td></tr>
+<tr><td style="padding:10px 24px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${facts.map(([k, v]) => `<tr><td style="${F}padding:6px 0;font-size:12px;color:#5e6a60;text-transform:uppercase;letter-spacing:.05em;width:40%">${k}</td><td style="${F}padding:6px 0;font-size:15px;color:#1b211c">${esc(v)}</td></tr>`).join("")}</table></td></tr>
+<tr><td style="padding:12px 24px 24px"><a href="${esc(link)}" style="${F}display:inline-block;background:#2b7a3b;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:8px">Åpne Tess Mobilservice</a>
+<div style="${F}font-size:12px;color:#5e6a60;margin-top:14px">Tildelt av ${esc(personName(myId()))}. Jobben ligger i jobblisten din når du åpner appen.</div></td></tr></table></td></tr></table></body></html>`;
+    try {
+      const { data, error } = await sb.functions.invoke(SEND_FN, { body: { to: p.email, subject: `Ny jobb: ${job.kunde || "jobb"}${job.beskrivelse ? " – " + job.beskrivelse : ""}`, text, html } });
+      if (error || !data || !data.ok) throw error || new Error("send");
+      toast("Jobben er tildelt " + personName(to) + ", og e-post er sendt");
+    } catch (e) {
+      toast("Jobben er tildelt " + personName(to) + ", men e-posten kunne ikke sendes");
+    }
+  }
+
+  const jobOrders = (id) => (S.jobs[id] && S.jobs[id].orders) || [];
+  // Every order with the job it belongs to ("" for general orders not tied to a job).
+  function allOrders() {
+    const out = S.orders.map((o) => ({ o, jobId: "" }));
+    for (const j of Object.values(S.jobs)) if (j && j.type === "job") for (const o of j.orders || []) out.push({ o, jobId: j.id });
+    return out;
+  }
+  const findOrder = (id) => allOrders().find((x) => x.o.id === id);
+  const orderDoc = (jobId) => (jobId ? jobId : "orders");
   // Order form and list. With a job id the panel shows only that job's orders; without, it is the overview across all jobs.
   function ordersPanel(jobId) {
-    const scope = jobId ? jobOrders(jobId) : S.orders;
-    const list = scope.filter((o) => S.ofilter === "alle" || o.status === S.ofilter);
-    const nDone = scope.filter((o) => o.status === "mottatt").length;
-    const rows = list.length ? `<div class="ledger">${list.map((o) => `<div class="lrow ${o.status === "mottatt" ? "done" : ""}"><span class="tag num">${qtyStr(o.antall)}</span>
+    const scope = jobId ? jobOrders(jobId).map((o) => ({ o, jobId })) : allOrders();
+    const list = scope.filter(({ o }) => S.ofilter === "alle" || o.status === S.ofilter);
+    const nDone = scope.filter(({ o }) => o.status === "mottatt").length;
+    const rows = list.length ? `<div class="ledger">${list.map(({ o, jobId: oj }) => `<div class="lrow ${o.status === "mottatt" ? "done" : ""}"><span class="tag num">${qtyStr(o.antall)}</span>
         <div class="main"><strong>${esc(o.navn)}</strong>${katName(o.navn) ? ` <span class="d">${esc(katName(o.navn))}</span>` : ""}<div class="d">${esc([o.enhet, o.lev, o.merk].filter(Boolean).join(" · "))}</div>
-        ${!jobId ? (o.jobId ? `<button class="btn sm ghost" data-a="open" data-id="${esc(o.jobId)}" data-tab="orders">${esc(jobLabel(o.jobId))}</button>` : `<div class="d">Ikke knyttet til jobb</div>`) : ""}</div>
+        ${!jobId ? (oj ? `<button class="btn sm ghost" data-a="open" data-id="${esc(oj)}" data-tab="orders">${esc(jobLabel(oj))}${S.isAdmin && ownerOf(S.jobs[oj]) !== myId() ? " · " + esc(personName(ownerOf(S.jobs[oj]))) : ""}</button>` : `<div class="d">Ikke knyttet til jobb</div>`) : ""}</div>
         <span class="acts"><button class="pill ${o.status}" data-a="ocycle" data-id="${esc(o.id)}" title="Trykk for å endre status">${ORDER_STATUS[o.status] || "Venter"}</button><button class="btn sm danger ${S.armed === "o" + o.id ? "armed" : ""}" data-a="odel" data-id="${esc(o.id)}" aria-label="Slett">${S.armed === "o" + o.id ? "Slett?" : "×"}</button></span></div>`).join("")}</div>`
       : `<p class="hint">${jobId ? "Ingenting å bestille til denne jobben ennå." : "Ingen bestillinger her."}</p>`;
     return `<form class="panel" id="form-orders" data-job="${esc(jobId || "")}"><h2>${jobId ? "Må bestilles til jobben" : "Legg til bestilling"}</h2>
@@ -1006,7 +1128,13 @@ details summary { cursor: pointer; padding: 4px 0; }
       { k: "utfort", l: "Utført av", w: 4, bind: true, ph: "Navn på teknikere" }
     ];
     const st = j.status || "aktiv", jt = j.jtype || "felt";
+    const others = people().filter((p) => p.user_id !== myId());
+    const assign = S.isAdmin
+      ? `<div class="fld"><label for="i-owner">Tildelt til</label><select id="i-owner">${(people().some((p) => p.user_id === myId()) ? people() : [{ user_id: myId() }].concat(people())).map((p) => `<option value="${esc(p.user_id)}"${p.user_id === ownerOf(j) ? " selected" : ""}>${esc(p.user_id === myId() ? ((S.settings.tech || "").trim() ? S.settings.tech.trim() + " (meg)" : "Meg") : p.name || p.email)}</option>`).join("")}</select>
+         <p class="hint">${others.length ? "Den du velger får jobben i sin jobbliste og en e-post med beskjed. Fyll inn kunde og oppdrag først, så kommer det med i e-posten." : "Kollegaer dukker opp her når de har logget inn i appen én gang."}</p></div>`
+      : j.assignedBy && j.assignedBy !== myId() ? `<p class="hint">Tildelt deg av ${esc(personName(j.assignedBy))}.</p>` : "";
     return `<section class="panel"><h2>Jobb og kunde</h2>
+      ${assign}
       <div class="fld"><span class="label">Type</span>${chips("jtype", jt, Object.entries(JTYPES))}</div>
       <div class="form">${F.map((f) => fieldHtml(f, j[f.k], "i-")).join("")}</div></section>
       <section class="panel"><span class="label">Status</span>${chips("status", st, Object.entries(STATUS))}
@@ -1217,14 +1345,14 @@ details summary { cursor: pointer; padding: 4px 0; }
       case "home": S.home = b.dataset.v; render(); window.scrollTo(0, 0); break;
       case "filter": S.filter = b.dataset.v; render(); break;
       case "tfilter": S.tfilter = b.dataset.v; render(); break;
+      case "ufilter": S.ufilter = b.dataset.v; render(); break;
       case "ofilter": S.ofilter = b.dataset.v; S.keepScroll = true; render(); break;
       case "tab": S.tab = b.dataset.v; S.edit = null; render(); window.scrollTo(0, 0); break;
       case "status": j.status = b.dataset.v; touch(j.id); S.keepScroll = true; render(); break;
       case "jtype": j.jtype = b.dataset.v; touch(j.id); S.keepScroll = true; render(); break;
       case "deljob":
         if (S.armed !== "del") { S.armed = "del"; S.keepScroll = true; render(); return; }
-        S.armed = null; delete S.jobs[j.id]; dirty.add(j.id); flush(j.id);
-        if (jobOrders(j.id).length) { S.orders = S.orders.filter((o) => o.jobId !== j.id); touch("orders"); }
+        S.armed = null; S.ownerOf[j.id] = ownerOf(j); delete S.jobs[j.id]; dirty.add(j.id); flush(j.id);
         S.view = "list"; S.jobId = null; render(); toast("Jobben er slettet"); break;
       case "editrow": S.edit = { mod: b.dataset.m, idx: +b.dataset.i }; render(); window.scrollTo(0, 0); break;
       case "canceledit": S.edit = null; render(); break;
@@ -1233,17 +1361,27 @@ details summary { cursor: pointer; padding: 4px 0; }
         if (S.armed !== key) { S.armed = key; S.keepScroll = true; render(); return; }
         S.armed = null; j[b.dataset.m].splice(+b.dataset.i, 1); S.edit = null; touch(j.id); S.keepScroll = true; render(); break;
       }
-      case "ocycle": { const o = S.orders.find((x) => x.id === b.dataset.id); if (o) { o.status = NEXT_STATUS[o.status] || "bestilt"; touch("orders"); S.keepScroll = true; render(); } break; }
+      case "ocycle": { const f = findOrder(b.dataset.id); if (f) { f.o.status = NEXT_STATUS[f.o.status] || "bestilt"; touch(orderDoc(f.jobId)); S.keepScroll = true; render(); } break; }
       case "odel": {
         const key = "o" + b.dataset.id;
         if (S.armed !== key) { S.armed = key; S.keepScroll = true; render(); return; }
-        S.armed = null; S.orders = S.orders.filter((x) => x.id !== b.dataset.id); touch("orders"); S.keepScroll = true; render(); break;
+        S.armed = null;
+        const f = findOrder(b.dataset.id);
+        if (f) {
+          if (f.jobId) S.jobs[f.jobId].orders = jobOrders(f.jobId).filter((x) => x.id !== f.o.id);
+          else S.orders = S.orders.filter((x) => x.id !== f.o.id);
+          touch(orderDoc(f.jobId));
+        }
+        S.keepScroll = true; render(); break;
       }
       case "oclear": {
         const jid = b.dataset.job || "";
-        const gone = (x) => x.status === "mottatt" && (!jid || x.jobId === jid);
-        const n = S.orders.filter(gone).length;
-        S.orders = S.orders.filter((x) => !gone(x)); touch("orders"); toast(n + " fjernet"); S.keepScroll = true; render(); break;
+        let n = 0;
+        const sweep = (list) => list.filter((x) => (x.status === "mottatt" ? (n++, false) : true));
+        const jobs = jid ? [S.jobs[jid]] : Object.values(S.jobs);
+        for (const job of jobs) if (job && (job.orders || []).some((x) => x.status === "mottatt")) { job.orders = sweep(job.orders); touch(job.id); }
+        if (!jid && S.orders.some((x) => x.status === "mottatt")) { S.orders = sweep(S.orders); touch("orders"); }
+        toast(n + " fjernet"); S.keepScroll = true; render(); break;
       }
       case "copy": {
         const txt = summaryText(j);
@@ -1308,8 +1446,11 @@ details summary { cursor: pointer; padding: 4px 0; }
     if (form.id === "form-orders") {
       const o = readForm(form, ORDER_FIELDS);
       if (!o.navn) { toast("Skriv inn vare eller beskrivelse"); $("#o-navn").focus(); return; }
-      S.orders.unshift(Object.assign({ id: "o-" + uid8(), status: "venter", jobId: form.dataset.job || "" }, o, { antall: o.antall || "1" }));
-      touch("orders"); toast("Lagt til"); render();
+      const jid = form.dataset.job || "";
+      const entry = Object.assign({ id: "o-" + uid8(), status: "venter" }, o, { antall: o.antall || "1" });
+      if (jid && S.jobs[jid]) { S.jobs[jid].orders = [entry].concat(jobOrders(jid)); touch(jid); }
+      else { S.orders.unshift(entry); touch("orders"); }
+      toast("Lagt til"); render();
       const n = $("#o-navn"); if (n) n.focus();
       return;
     }
@@ -1337,6 +1478,10 @@ details summary { cursor: pointer; padding: 4px 0; }
     render();
     const focusId = { hoses: "hoses-len", items: "items-nr", hours: "hours-from" }[m];
     const f2 = focusId && $("#" + focusId); if (f2) f2.focus();
+  });
+
+  document.addEventListener("change", (e) => {
+    if (e.target.id === "i-owner" && S.jobs[S.jobId]) { assignJob(S.jobs[S.jobId], e.target.value); S.keepScroll = true; render(); }
   });
 
   document.addEventListener("input", (e) => {
