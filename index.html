@@ -218,7 +218,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-12.4";
+  const APP_VERSION = "2026-10-12.5";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -1045,16 +1045,16 @@ details summary { cursor: pointer; padding: 4px 0; }
     const p = S.profiles.find((x) => x.user_id === to);
     if (!p || !p.email || !sb) { toast("Jobben er tildelt " + personName(to)); return; }
     const facts = [["Kunde", job.kunde], ["Oppdrag", job.beskrivelse], ["Fartøy / lokasjon", job.sted], ["Dato", fmtDate(job.dato)], ["Kundens ref.", job.ref], ["PO-nummer", job.po]].filter(([, v]) => v);
-    const link = siteUrl();
-    const text = `Hei ${p.name || ""}\n\n${personName(myId())} har tildelt deg en jobb i Tess Mobilservice.\n\n${facts.map(([k, v]) => k + ": " + v).join("\n")}\n\nÅpne appen: ${link}`;
+    // No links in this e-mail: links to github.io get it flagged as phishing and quarantined by Microsoft 365.
+    const text = `Hei ${p.name || ""}\n\n${personName(myId())} har tildelt deg en jobb i Tess Mobilservice.\n\n${facts.map(([k, v]) => k + ": " + v).join("\n")}\n\nÅpne Tess Mobilservice-appen for å se jobben. Den ligger i jobblisten din.`;
     const F = "font-family:Arial,Helvetica,sans-serif;";
     const html = `<!doctype html><html lang="nb"><body style="margin:0;background:#eef1ec"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1ec"><tr><td align="center" style="padding:20px 10px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #dfe4dc">
 <tr><td style="background:#2b7a3b;padding:16px 24px"><div style="${F}color:#fff;font-size:24px;font-weight:900;letter-spacing:.03em">${esc(BRAND.name)}</div><div style="${F}color:#e2f1e2;font-size:10px;letter-spacing:.12em;margin-top:3px">${esc(BRAND.tag)}</div></td></tr>
 <tr><td style="padding:22px 24px 6px"><div style="${F}font-size:12px;color:#5e6a60;text-transform:uppercase;letter-spacing:.08em">Ny jobb tildelt deg</div><h1 style="${F}margin:6px 0 4px;font-size:22px;color:#1b211c">${esc(job.kunde || "Ny jobb")}</h1>${job.beskrivelse ? `<div style="${F}font-size:16px;color:#1b211c">${esc(job.beskrivelse)}</div>` : ""}</td></tr>
 <tr><td style="padding:10px 24px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${facts.map(([k, v]) => `<tr><td style="${F}padding:6px 0;font-size:12px;color:#5e6a60;text-transform:uppercase;letter-spacing:.05em;width:40%">${k}</td><td style="${F}padding:6px 0;font-size:15px;color:#1b211c">${esc(v)}</td></tr>`).join("")}</table></td></tr>
-<tr><td style="padding:12px 24px 24px"><a href="${esc(link)}" style="${F}display:inline-block;background:#2b7a3b;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:8px">Åpne Tess Mobilservice</a>
-<div style="${F}font-size:12px;color:#5e6a60;margin-top:14px">Tildelt av ${esc(personName(myId()))}. Jobben ligger i jobblisten din når du åpner appen.</div></td></tr></table></td></tr></table></body></html>`;
+<tr><td style="padding:12px 24px 24px"><div style="${F}background:#e2f1e2;color:#1f6030;font-weight:700;font-size:15px;padding:12px 16px;border-radius:8px">Åpne Tess Mobilservice-appen for å se jobben. Den ligger i jobblisten din.</div>
+<div style="${F}font-size:12px;color:#5e6a60;margin-top:14px">Tildelt av ${esc(personName(myId()))}.</div></td></tr></table></td></tr></table></body></html>`;
     try {
       const { data, error } = await sb.functions.invoke(SEND_FN, { body: { to: p.email, subject: `Ny jobb: ${job.kunde || "jobb"}${job.beskrivelse ? " – " + job.beskrivelse : ""}`, text, html } });
       if (error || !data || !data.ok) throw error || new Error("send");
