@@ -223,7 +223,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-12.10";
+  const APP_VERSION = "2026-10-12.11";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -1004,27 +1004,43 @@ details summary { cursor: pointer; padding: 4px 0; }
     const measured = prod.slice();
     prod.sort((a, b) => typeCompare(a.type, b.type) || a.len - b.len || String(a.i1).localeCompare(String(b.i1)) || String(a.i2).localeCompare(String(b.i2)));
 
-    // ---- Underlag: the plain hose list in measuring order, with the column names hose lists usually have ----
+    // ---- Underlag: TESS masterdata import template (77 columns, same order, widths and look as "Masterdata tom.xlsx").
+    // ID is left empty for the system to assign; the app's hose ID goes in Customer ID.
+    const MASTER_HEADS = ["ID", "Production Date", "Installed date", "Department", "Description", "Status", "Customer No", "RFID", "Cust Eq No", "S1 Code", "S1 Plant, Vessel, Unit", "S2 Code", "S2 Equipment", "Equipment Subunit", "Other Info", "Customer ID", "Criticality", "Pollution Exposure", "UV Exposure", "Hose Standard", "Hose Length (mm)", "WP (BAR)", "WP (PSI)", "Class", "Type Fitting End 1", "Generic Dim End 1", "Gender End 1", "Angle End 1", "Type Fitting End 2", "Generic Dim End 2", "Gender End 2", "Angle End 2", "Coupling Orientation", "Material Quality End 1", "Material Quality End 2", "General Comment (PTC)", "Comment End 1 (PTC)", "Comment End 2 (PTC)", "Original Hose Comment", "Hose Type", "Ferrule 1", "Ferrule 2", "Insert 1", "Insert 2", "Add A End 1", "Add B End 1", "Add C End 1", "Add D End 1", "Add E End 1", "Add A End 2", "Add B End 2", "Add C End 2", "Add D End 2", "Add E End 2", "Drawing No", "Pos No", "Art No", "Hose Medium", "Hose Function", "Ecom Ready", "Electrical Conductivity (Ohm)", "Customer Art No", "System", "Hose Protection", "Spiralguard", "Emergency Hose Comment", "Emergency Hose Link", "Spare set hose?", "Pinpricked", "Cust Order No", "TESS Order No", "Inspected date (PDA only)", "Inspector", "Hose Condition", "Approved", "Part number updates needed", "TESS as Order No"];
+    const MASTER_WIDTHS = [10, 22, 21, 18, 78.1, 13, 16, 24, 15, 12, 33, 12, 57, 30, 55, 37, 16, 27, 16, 31, 24, 12, 12, 7, 27, 25, 18, 16, 60, 25, 18, 16, 30, 33, 33, 60, 73, 73, 75, 13, 16, 16, 19, 19, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 40, 19, 15, 43, 22, 9, 22, 16, 33, 28, 22, 15, 33, 19, 37, 28, 21, 12, 39, 24];
     const src = wb.addWorksheet("Underlag");
-    const srcHeads = ["ID", "Description", "Hose Type", "Hose Length (mm)", "Ferrule 1", "Ferrule 2", "Insert 1", "Insert 2", "Add A End 1", "Add B End 1", "Add C End 1", "Add A End 2", "Add B End 2", "Add C End 2", "Equipment Subunit", "Pressure (bar)", "Comment"];
-    const srcWidths = [8, 22, 12, 16, 12, 12, 15, 15, 11, 11, 11, 11, 11, 11, 26, 13, 30];
-    srcHeads.forEach((t, i) => {
-      const col = src.getColumn(i + 1);
-      col.width = srcWidths[i];
-      if (i !== 3) col.numFmt = "@";
-      const cell = src.getCell(1, i + 1); cell.value = t; cell.font = { bold: true }; cell.fill = fill(i >= 4 && i <= 5 ? FILL.ferr : i >= 6 && i <= 13 ? FILL.ins : FILL.hose); cell.border = box;
+    const col = (h) => MASTER_HEADS.indexOf(h) + 1;
+    const mThin = { style: "thin", color: { auto: true } };
+    const mBox = { top: mThin, left: mThin, bottom: mThin, right: mThin };
+    MASTER_HEADS.forEach((t, i) => {
+      src.getColumn(i + 1).width = MASTER_WIDTHS[i];
+      const cell = src.getCell(1, i + 1);
+      cell.value = t; cell.font = { name: "Calibri", size: 11, bold: true }; cell.border = mBox;
     });
+    const numeric = new Set([col("Hose Length (mm)"), col("WP (BAR)")]);
     measured.forEach((p, idx) => {
-      const vals = [p.id, p.type ? `${p.type} x ${nf(p.len, 0).replace(/\s/g, "")} mm` : "", p.type, p.len, p.f1, p.f2, p.i1, p.i2, ...p.adds, p.sub, String(p.bar || ""), p.note];
-      vals.forEach((v, i) => {
-        const cell = src.getCell(idx + 2, i + 1);
-        if (i !== 3) { cell.numFmt = "@"; cell.value = String(v == null ? "" : v); } else cell.value = v;
-        cell.border = box;
+      const r = idx + 2;
+      const v = {};
+      v["Customer ID"] = p.id;
+      v["Description"] = p.type ? `${p.type} x ${nf(p.len, 0).replace(/\s/g, "")} mm` : "";
+      v["S1 Plant, Vessel, Unit"] = job.sted || "";
+      v["Equipment Subunit"] = p.sub;
+      v["Hose Length (mm)"] = p.len || "";
+      v["WP (BAR)"] = p.bar ? num(p.bar) : "";
+      v["General Comment (PTC)"] = p.note;
+      v["Hose Type"] = p.type;
+      v["Ferrule 1"] = p.f1; v["Ferrule 2"] = p.f2;
+      v["Insert 1"] = p.i1; v["Insert 2"] = p.i2;
+      ["Add A End 1", "Add B End 1", "Add C End 1", "Add A End 2", "Add B End 2", "Add C End 2"].forEach((h, k) => (v[h] = p.adds[k]));
+      v["Cust Order No"] = job.po || "";
+      MASTER_HEADS.forEach((h, i) => {
+        const cell = src.getCell(r, i + 1);
+        const val = v[h];
+        if (numeric.has(i + 1)) { if (val !== "" && val != null) cell.value = val; }
+        else { cell.numFmt = "@"; if (val) cell.value = String(val); }
+        cell.border = mBox; cell.alignment = { wrapText: true };
       });
     });
-    src.views = [{ state: "frozen", ySplit: 1 }];
-    src.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: srcHeads.length } };
-    src.pageSetup = { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 }, printTitlesRow: "1:1" };
 
     // ---- Summary ----
     const sum = wb.addWorksheet("Summary");
