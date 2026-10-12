@@ -148,6 +148,7 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
 button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
 .tb { font: 600 12px var(--f-body); padding: 2px 8px; border-radius: 4px; background: var(--tint); color: var(--brand); }
 .tb.butikk { background: color-mix(in srgb, var(--plum) 14%, transparent); color: var(--plum); }
+.assignee { font: 700 20px/1.2 var(--f-display); margin-top: 2px; }
 .tb.person { background: color-mix(in srgb, var(--steel) 14%, transparent); color: var(--steel); }
 .tb.verksted { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
 
@@ -217,7 +218,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-12.3";
+  const APP_VERSION = "2026-10-12.4";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -1129,12 +1130,20 @@ details summary { cursor: pointer; padding: 4px 0; }
     ];
     const st = j.status || "aktiv", jt = j.jtype || "felt";
     const others = people().filter((p) => p.user_id !== myId());
+    const owner = ownerOf(j);
+    const label = (id) => (id === myId() ? ((S.settings.tech || "").trim() ? S.settings.tech.trim() + " (meg)" : "Meg") : personName(id));
+    // Everyone the job can be handed to: colleagues, and me when it currently sits with someone else.
+    const targets = others.map((p) => p.user_id).filter((id) => id !== owner).concat(owner !== myId() ? [myId()] : []);
     const assign = S.isAdmin
-      ? `<div class="fld"><label for="i-owner">Tildelt til</label><select id="i-owner">${(people().some((p) => p.user_id === myId()) ? people() : [{ user_id: myId() }].concat(people())).map((p) => `<option value="${esc(p.user_id)}"${p.user_id === ownerOf(j) ? " selected" : ""}>${esc(p.user_id === myId() ? ((S.settings.tech || "").trim() ? S.settings.tech.trim() + " (meg)" : "Meg") : p.name || p.email)}</option>`).join("")}</select>
-         <p class="hint">${others.length ? "Den du velger får jobben i sin jobbliste og en e-post med beskjed. Fyll inn kunde og oppdrag først, så kommer det med i e-posten." : "Kollegaer dukker opp her når de har logget inn i appen én gang."}</p></div>`
-      : j.assignedBy && j.assignedBy !== myId() ? `<p class="hint">Tildelt deg av ${esc(personName(j.assignedBy))}.</p>` : "";
-    return `<section class="panel"><h2>Jobb og kunde</h2>
-      ${assign}
+      ? `<section class="panel"><div class="row"><div class="grow"><span class="label">Tildelt til</span><div class="assignee">${esc(label(owner))}</div></div>
+          ${S.assignOpen ? "" : `<button class="btn primary" data-a="assignopen">${owner === myId() ? "Tildel til kollega" : "Tildel på nytt"}</button>`}</div>
+          ${S.assignOpen ? (targets.length
+            ? `<span class="label">Velg hvem som skal få jobben</span><div class="row">${targets.map((id) => `<button class="btn" data-a="assignto" data-v="${esc(id)}">${esc(label(id))}</button>`).join("")}</div><div><button class="btn ghost sm" data-a="assigncancel">Avbryt</button></div>`
+            : `<p class="hint">Ingen kollegaer å velge ennå. De dukker opp her når de har logget inn i appen én gang.</p><div><button class="btn ghost sm" data-a="assigncancel">Lukk</button></div>`) : ""}
+          ${!S.assignOpen && owner !== myId() ? `<div><button class="btn sm ghost" data-a="renotify">Send e-post om jobben på nytt</button></div>` : ""}
+          ${!S.assignOpen ? `<p class="hint">Den som får jobben, ser den i jobblisten sin og får en e-post. Fyll inn kunde og oppdrag først, så kommer det med i e-posten.</p>` : ""}</section>`
+      : j.assignedBy && j.assignedBy !== myId() ? `<section class="panel"><p class="hint">Tildelt deg av ${esc(personName(j.assignedBy))}.</p></section>` : "";
+    return `${assign}<section class="panel"><h2>Jobb og kunde</h2>
       <div class="fld"><span class="label">Type</span>${chips("jtype", jt, Object.entries(JTYPES))}</div>
       <div class="form">${F.map((f) => fieldHtml(f, j[f.k], "i-")).join("")}</div></section>
       <section class="panel"><span class="label">Status</span>${chips("status", st, Object.entries(STATUS))}
@@ -1339,13 +1348,17 @@ details summary { cursor: pointer; padding: 4px 0; }
       case "syncnow": await syncNow(); S.keepScroll = true; render(); break;
       case "new": S.home = "jobs"; newJob(false); break;
       case "example": newJob(true); break;
-      case "open": if (!S.jobs[b.dataset.id]) break; S.view = "job"; S.jobId = b.dataset.id; S.tab = b.dataset.tab || "info"; S.edit = null; render(); window.scrollTo(0, 0); break;
+      case "open": if (!S.jobs[b.dataset.id]) break; S.assignOpen = false; S.view = "job"; S.jobId = b.dataset.id; S.tab = b.dataset.tab || "info"; S.edit = null; render(); window.scrollTo(0, 0); break;
       case "back": S.view = "list"; S.jobId = null; S.edit = null; render(); window.scrollTo(0, 0); break;
       case "settings": S.view = "settings"; render(); break;
       case "home": S.home = b.dataset.v; render(); window.scrollTo(0, 0); break;
       case "filter": S.filter = b.dataset.v; render(); break;
       case "tfilter": S.tfilter = b.dataset.v; render(); break;
       case "ufilter": S.ufilter = b.dataset.v; render(); break;
+      case "assignopen": S.assignOpen = true; S.keepScroll = true; render(); break;
+      case "assigncancel": S.assignOpen = false; S.keepScroll = true; render(); break;
+      case "assignto": S.assignOpen = false; assignJob(j, b.dataset.v); S.keepScroll = true; render(); break;
+      case "renotify": notifyAssigned(j, ownerOf(j)); break;
       case "ofilter": S.ofilter = b.dataset.v; S.keepScroll = true; render(); break;
       case "tab": S.tab = b.dataset.v; S.edit = null; render(); window.scrollTo(0, 0); break;
       case "status": j.status = b.dataset.v; touch(j.id); S.keepScroll = true; render(); break;
