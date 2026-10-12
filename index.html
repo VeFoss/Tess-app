@@ -219,7 +219,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-12.8";
+  const APP_VERSION = "2026-10-12.9";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -978,9 +978,32 @@ details summary { cursor: pointer; padding: 4px 0; }
     const prod = [];
     for (const h of job.hoses || []) {
       const n = Math.max(1, Math.round(num(h.qty) || 1));
-      for (let k = 1; k <= n; k++) prod.push({ id: n > 1 ? `${h.pos || ""}.${k}` : String(h.pos || ""), type: h.type || "", len: num(h.len), f1: h.hylse || "", f2: h.hylse || "", i1: h.e1 || "", i2: h.e2 || "", sub: h.sted || "" });
+      for (let k = 1; k <= n; k++) prod.push({ id: n > 1 ? `${h.pos || ""}.${k}` : String(h.pos || ""), type: h.type || "", len: num(h.len), f1: h.hylse || "", f2: h.hylse || "", i1: h.e1 || "", i2: h.e2 || "", sub: h.sted || "", bar: h.bar || "", note: h.note || "" });
     }
+    const measured = prod.slice();
     prod.sort((a, b) => typeCompare(a.type, b.type) || a.len - b.len || String(a.i1).localeCompare(String(b.i1)) || String(a.i2).localeCompare(String(b.i2)));
+
+    // ---- Underlag: the plain hose list in measuring order, with the column names hose lists usually have ----
+    const src = wb.addWorksheet("Underlag");
+    const srcHeads = ["ID", "Description", "Hose Type", "Hose Length (mm)", "Ferrule 1", "Ferrule 2", "Insert 1", "Insert 2", "Add A End 1", "Add B End 1", "Add C End 1", "Add A End 2", "Add B End 2", "Add C End 2", "Equipment Subunit", "Pressure (bar)", "Comment"];
+    const srcWidths = [8, 22, 12, 16, 12, 12, 15, 15, 11, 11, 11, 11, 11, 11, 26, 13, 30];
+    srcHeads.forEach((t, i) => {
+      const col = src.getColumn(i + 1);
+      col.width = srcWidths[i];
+      if (i !== 3) col.numFmt = "@";
+      const cell = src.getCell(1, i + 1); cell.value = t; cell.font = { bold: true }; cell.fill = fill(i >= 4 && i <= 5 ? FILL.ferr : i >= 6 && i <= 13 ? FILL.ins : FILL.hose); cell.border = box;
+    });
+    measured.forEach((p, idx) => {
+      const vals = [p.id, p.type ? `${p.type} x ${nf(p.len, 0).replace(/\s/g, "")} mm` : "", p.type, p.len, p.f1, p.f2, p.i1, p.i2, "", "", "", "", "", "", p.sub, String(p.bar || ""), p.note];
+      vals.forEach((v, i) => {
+        const cell = src.getCell(idx + 2, i + 1);
+        if (i !== 3) { cell.numFmt = "@"; cell.value = String(v == null ? "" : v); } else cell.value = v;
+        cell.border = box;
+      });
+    });
+    src.views = [{ state: "frozen", ySplit: 1 }];
+    src.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: srcHeads.length } };
+    src.pageSetup = { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 }, printTitlesRow: "1:1" };
 
     // ---- Summary ----
     const sum = wb.addWorksheet("Summary");
