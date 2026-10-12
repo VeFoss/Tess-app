@@ -223,7 +223,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-12.11";
+  const APP_VERSION = "2026-10-12.12";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -344,7 +344,8 @@ details summary { cursor: pointer; padding: 4px 0; }
       title: "Slanger", add: "Legg til slange",
       fields: [
         { k: "pos", l: "Pos.", w: 1, ph: "1" },
-        { k: "sted", l: "Sted / system", w: 3, ph: "F.eks. kran, hovedsylinder", list: true },
+        { k: "utstyr", l: "Utstyr (S2)", w: 3, ph: "F.eks. Offshore crane", list: true },
+        { k: "sted", l: "Sted / system", w: 4, ph: "F.eks. hovedsylinder, sving", list: true },
         { k: "type", l: "Slangetype", w: 2, ph: "5256-06", cat: true, req: true, cls: "wide-m" },
         { k: "len", l: "Lengde (mm)", w: 1, num: true, req: true },
         { k: "qty", l: "Antall", w: 1, num: true, def: "1" },
@@ -360,7 +361,7 @@ details summary { cursor: pointer; padding: 4px 0; }
         { k: "b2", l: "Add B", w: 1, cat: true, group: "add", end: 2 },
         { k: "c2", l: "Add C", w: 1, cat: true, group: "add", end: 2 }
       ],
-      keep: ["sted", "type", "hylse", "bar"]
+      keep: ["utstyr", "sted", "type", "hylse", "bar"]
     },
     items: {
       title: "Materiell", add: "Legg til vare",
@@ -839,7 +840,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       hr(); line(`SLANGER (${s.count} stk)`);
       for (const h of job.hoses) {
         const parts = [`Pos ${h.pos || "-"}`];
-        if (h.sted) parts.push(h.sted);
+        if (h.utstyr || h.sted) parts.push([h.utstyr, h.sted].filter(Boolean).join(", "));
         parts.push(`${h.type || "?"}  ${nf(h.len, 0)} mm x${num(h.qty) || 1}`);
         if (h.e1 || h.e2) parts.push(`${h.e1 || "-"} / ${h.e2 || "-"}`);
         if (h.hylse) parts.push("Hylse " + h.hylse);
@@ -921,7 +922,7 @@ details summary { cursor: pointer; padding: 4px 0; }
 
     // Hoses
     if ((job.hoses || []).length) {
-      const rows = job.hoses.map((h) => `<tr>${td(`<b>${e(h.pos || "–")}</b>`, "white-space:nowrap;")}${td(`<b>${e(h.type)}</b>${small(e([katName(h.type), h.sted].filter(Boolean).join(" · ")))}`)}${td(`${e(nf(h.len, 0))} mm${num(h.qty) > 1 ? ` × ${e(h.qty)}` : ""}`, R)}${td(`${e(h.e1 || "–")} / ${e(h.e2 || "–")}${small(e([h.hylse && "Hylse " + h.hylse, addText(h), h.bar && h.bar + " bar"].filter(Boolean).join(" · ")))}`)}${td(e(h.note || ""))}</tr>`).join("");
+      const rows = job.hoses.map((h) => `<tr>${td(`<b>${e(h.pos || "–")}</b>`, "white-space:nowrap;")}${td(`<b>${e(h.type)}</b>${small(e([katName(h.type), h.utstyr, h.sted].filter(Boolean).join(" · ")))}`)}${td(`${e(nf(h.len, 0))} mm${num(h.qty) > 1 ? ` × ${e(h.qty)}` : ""}`, R)}${td(`${e(h.e1 || "–")} / ${e(h.e2 || "–")}${small(e([h.hylse && "Hylse " + h.hylse, addText(h), h.bar && h.bar + " bar"].filter(Boolean).join(" · ")))}`)}${td(e(h.note || ""))}</tr>`).join("");
       let inner = table(th("Pos") + th("Slange / sted") + th("Lengde", R) + th("Ender / hylse") + th("Merknad"), rows);
       const mat = [];
       for (const [t, v] of Object.entries(s.byType)) mat.push([t, katName(t) || "Slange", nf(v.mm / 1000, 2) + " m"]);
@@ -999,7 +1000,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     const prod = [];
     for (const h of job.hoses || []) {
       const n = Math.max(1, Math.round(num(h.qty) || 1));
-      for (let k = 1; k <= n; k++) prod.push({ id: n > 1 ? `${h.pos || ""}.${k}` : String(h.pos || ""), type: h.type || "", len: num(h.len), f1: h.hylse || "", f2: h.hylse || "", i1: h.e1 || "", i2: h.e2 || "", adds: ADD_KEYS.map((k) => h[k] || ""), sub: h.sted || "", bar: h.bar || "", note: h.note || "" });
+      for (let k = 1; k <= n; k++) prod.push({ id: n > 1 ? `${h.pos || ""}.${k}` : String(h.pos || ""), type: h.type || "", len: num(h.len), f1: h.hylse || "", f2: h.hylse || "", i1: h.e1 || "", i2: h.e2 || "", adds: ADD_KEYS.map((k) => h[k] || ""), eq: h.utstyr || "", sub: h.sted || "", bar: h.bar || "", note: h.note || "" });
     }
     const measured = prod.slice();
     prod.sort((a, b) => typeCompare(a.type, b.type) || a.len - b.len || String(a.i1).localeCompare(String(b.i1)) || String(a.i2).localeCompare(String(b.i2)));
@@ -1024,7 +1025,8 @@ details summary { cursor: pointer; padding: 4px 0; }
       v["Customer ID"] = p.id;
       v["Description"] = p.type ? `${p.type} x ${nf(p.len, 0).replace(/\s/g, "")} mm` : "";
       v["S1 Plant, Vessel, Unit"] = job.sted || "";
-      v["Equipment Subunit"] = p.sub;
+      v["S2 Equipment"] = p.eq;
+      v["Other Info"] = p.sub;
       v["Hose Length (mm)"] = p.len || "";
       v["WP (BAR)"] = p.bar ? num(p.bar) : "";
       v["General Comment (PTC)"] = p.note;
@@ -1379,7 +1381,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     if (m === "hoses") {
       tag = esc(r.pos || "–");
       main = `<strong>${esc(r.type)}</strong>${katName(r.type) ? ` <span class="d">${esc(katName(r.type))}</span>` : ""} · <span class="num">${nf(r.len, 0)} mm</span>${num(r.qty) > 1 ? ` <span class="num">×${esc(r.qty)}</span>` : ""}
-        <div class="d">${esc([r.sted, (r.e1 || r.e2) && (r.e1 || "–") + " / " + (r.e2 || "–"), r.hylse && "Hylse " + r.hylse, addText(r), r.bar && r.bar + " bar", r.note].filter(Boolean).join(" · "))}</div>`;
+        <div class="d">${esc([[r.utstyr, r.sted].filter(Boolean).join(", "), (r.e1 || r.e2) && (r.e1 || "–") + " / " + (r.e2 || "–"), r.hylse && "Hylse " + r.hylse, addText(r), r.bar && r.bar + " bar", r.note].filter(Boolean).join(" · "))}</div>`;
     } else if (m === "items") {
       tag = `<span class="num">${qtyStr(r.qty)}</span>`;
       main = `<strong>${esc(itemName(r))}</strong> <span class="d">${esc(r.unit || "stk")}</span><div class="d">${esc([r.nr && r.nr !== itemName(r) ? r.nr : "", r.note].filter(Boolean).join(" · "))}</div>`;
