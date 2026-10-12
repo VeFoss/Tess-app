@@ -219,7 +219,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-12.6";
+  const APP_VERSION = "2026-10-12.7";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -936,6 +936,120 @@ details summary { cursor: pointer; padding: 4px 0; }
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:700px;background:#ffffff;border-radius:10px;overflow:hidden;border:1px solid ${LINE}">${out.join("")}</table>
 </td></tr></table></body></html>`;
   }
+  // ---------- file export ----------
+  async function saveFile(name, blob, okMsg) {
+    if (STANDALONE) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a"); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      return;
+    }
+    if (!downloads) { toast("Nedlasting er ikke tilgjengelig her."); return; }
+    try { await downloads.save({ filename: name, data: blob }); toast(okMsg); }
+    catch (err) { if (err && err.code !== "declined") toast("Kunne ikke lage filen her."); }
+  }
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src; s.onload = resolve; s.onerror = () => reject(new Error("load " + src));
+      document.head.appendChild(s);
+    });
+  }
+  // Hose type order: by the dimension after the last dash (numeric), then the part before it. 5532-10, 547-12, 5256-16, 5256-24.
+  function typeCompare(a, b) {
+    const split = (t) => { const s = String(t || ""), i = s.lastIndexOf("-"); return i < 0 ? ["", s] : [s.slice(i + 1), s.slice(0, i)]; };
+    const cmp = (x, y) => { const nx = parseFloat(x), ny = parseFloat(y); return isFinite(nx) && isFinite(ny) && nx !== ny ? nx - ny : String(x).localeCompare(String(y), "nb", { numeric: true }); };
+    const [sa, pa] = split(a), [sb2, pb] = split(b);
+    return cmp(sa, sb2) || cmp(pa, pb);
+  }
+  // Excel workbook in the same layout as the hose-summary routine: a Summary sheet with SUM formulas and a
+  // Produksjon sheet with one row per hose to build (a row with quantity 3 becomes three rows).
+  async function hoseWorkbook(job) {
+    if (!window.ExcelJS) await loadScript("https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js");
+    const XL = window.ExcelJS;
+    const wb = new XL.Workbook();
+    wb.creator = "Tess Mobilservice"; wb.created = new Date();
+    const FILL = { hose: "FFD9E1F2", ferr: "FFE2EFDA", ins: "FFFFF2CC" };
+    const fill = (argb) => ({ type: "pattern", pattern: "solid", fgColor: { argb } });
+    const thin = { style: "thin", color: { argb: "FFBFBFBF" } };
+    const box = { top: thin, left: thin, bottom: thin, right: thin };
+
+    // One production row per physical hose.
+    const prod = [];
+    for (const h of job.hoses || []) {
+      const n = Math.max(1, Math.round(num(h.qty) || 1));
+      for (let k = 1; k <= n; k++) prod.push({ id: n > 1 ? `${h.pos || ""}.${k}` : String(h.pos || ""), type: h.type || "", len: num(h.len), f1: h.hylse || "", f2: h.hylse || "", i1: h.e1 || "", i2: h.e2 || "", sub: h.sted || "" });
+    }
+    prod.sort((a, b) => typeCompare(a.type, b.type) || a.len - b.len || String(a.i1).localeCompare(String(b.i1)) || String(a.i2).localeCompare(String(b.i2)));
+
+    // ---- Summary ----
+    const sum = wb.addWorksheet("Summary");
+    const byType = {}, ferr = {}, ins = {};
+    for (const p of prod) {
+      if (p.type) byType[p.type] = (byType[p.type] || 0) + p.len;
+      for (const f of [p.f1, p.f2]) if (f) ferr[f] = (ferr[f] || 0) + 1;
+      for (const i of [p.i1, p.i2]) if (i) ins[i] = (ins[i] || 0) + 1;
+    }
+    const block = (col, head, rows, color, meters) => {
+      const c = (o) => String.fromCharCode(col.charCodeAt(0) + o);
+      const heads = meters ? [head, "Total lengde (mm)", "Total lengde (m)"] : [head, "Antall"];
+      heads.forEach((t, o) => { const cell = sum.getCell(c(o) + "1"); cell.value = t; cell.font = { bold: true }; cell.fill = fill(color); cell.border = box; });
+      rows.forEach(([k, v], idx) => {
+        const r = idx + 2;
+        const key = sum.getCell(c(0) + r); key.numFmt = "@"; key.value = String(k); key.border = box;
+        const val = sum.getCell(c(1) + r); val.value = v; val.border = box;
+        if (meters) { const m = sum.getCell(c(2) + r); m.value = { formula: `${c(1)}${r}/1000`, result: v / 1000 }; m.numFmt = "0.00"; m.border = box; }
+      });
+      const tr = rows.length + 2, last = rows.length + 1, total = rows.reduce((s, [, v]) => s + v, 0);
+      const t = sum.getCell(c(0) + tr); t.value = "TOTAL"; t.font = { bold: true }; t.border = box;
+      const tv = sum.getCell(c(1) + tr); tv.value = { formula: rows.length ? `SUM(${c(1)}2:${c(1)}${last})` : "0", result: total }; tv.font = { bold: true }; tv.border = box;
+      if (meters) { const tm = sum.getCell(c(2) + tr); tm.value = { formula: `${c(1)}${tr}/1000`, result: total / 1000 }; tm.numFmt = "0.00"; tm.font = { bold: true }; tm.border = box; }
+    };
+    const sorted = (o, byTypeOrder) => Object.entries(o).sort((a, b) => (byTypeOrder ? typeCompare(a[0], b[0]) : String(a[0]).localeCompare(String(b[0]), "nb", { numeric: true })));
+    block("A", "Slangetype", sorted(byType, true), FILL.hose, true);
+    block("E", "Hylse", sorted(ferr), FILL.ferr, false);
+    block("H", "Innsats", sorted(ins), FILL.ins, false);
+    [["A", 14], ["B", 18], ["C", 17], ["D", 3], ["E", 14], ["F", 9], ["G", 3], ["H", 16], ["I", 9]].forEach(([k, w]) => (sum.getColumn(k).width = w));
+    // Job details under the blocks, so the printout says which order it belongs to.
+    const infoRow = Math.max(Object.keys(byType).length, Object.keys(ferr).length, Object.keys(ins).length) + 4;
+    [["Kunde", job.kunde], ["Oppdrag", job.beskrivelse], ["Fartøy / lokasjon", job.sted], ["Kundens ref.", job.ref], ["PO-nummer", job.po], ["Dato", fmtDate(job.dato)]].filter(([, v]) => v).forEach(([k, v], i) => {
+      const a = sum.getCell("A" + (infoRow + i)); a.value = k; a.font = { bold: true, color: { argb: "FF5E6A60" } };
+      const bcell = sum.getCell("B" + (infoRow + i)); bcell.numFmt = "@"; bcell.value = String(v);
+    });
+
+    // ---- Produksjon ----
+    const ws = wb.addWorksheet("Produksjon");
+    const heads = ["ID", "Slangetype", "Lengde (mm)", "Hylse 1", "Hylse 2", "Innsats 1", "Innsats 2", "Add A E1", "Add B E1", "Add C E1", "Add A E2", "Add B E2", "Add C E2", "Subunit"];
+    const headFill = [FILL.hose, FILL.hose, FILL.hose, FILL.ferr, FILL.ferr, FILL.ins, FILL.ins, FILL.ins, FILL.ins, FILL.ins, FILL.ins, FILL.ins, FILL.ins, FILL.hose];
+    const widths = [8, 13, 12, 12, 12, 15, 15, 10, 10, 10, 10, 10, 10, 26];
+    heads.forEach((t, i) => {
+      const col = ws.getColumn(i + 1);
+      col.width = widths[i];
+      if (i !== 2) col.numFmt = "@";
+      const cell = ws.getCell(1, i + 1); cell.value = t; cell.font = { bold: true }; cell.fill = fill(headFill[i]); cell.border = box; cell.alignment = { vertical: "middle" };
+    });
+    ws.getRow(1).height = 22;
+    prod.forEach((p, idx) => {
+      const r = idx + 2;
+      [p.id, p.type, p.len, p.f1, p.f2, p.i1, p.i2, "", "", "", "", "", "", p.sub].forEach((v, i) => {
+        const cell = ws.getCell(r, i + 1);
+        if (i !== 2) { cell.numFmt = "@"; cell.value = String(v); } else cell.value = v;
+        cell.border = box; cell.alignment = { vertical: "middle" };
+      });
+      ws.getRow(r).height = 22;
+    });
+    ws.views = [{ state: "frozen", ySplit: 1 }];
+    ws.pageSetup = {
+      paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0,
+      margins: { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
+      printArea: `A1:N${prod.length + 1}`, printTitlesRow: "1:1"
+    };
+    ws.headerFooter = { oddHeader: `&L${(job.kunde || "").replace(/&/g, "&&")}${job.beskrivelse ? " – " + job.beskrivelse.replace(/&/g, "&&") : ""}&R${fmtDate(job.dato)}`, oddFooter: "&RSide &P av &N" };
+    sum.pageSetup = { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 } };
+
+    const buf = await wb.xlsx.writeBuffer();
+    return new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  }
   function csvText(job) {
     const q = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
     const rows = [["Kategori", "Varenr", "Beskrivelse", "Antall", "Enhet", "Kommentar"]];
@@ -1219,7 +1333,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       const s = hoseSums(j);
       const tiles = Object.entries(s.byType).map(([t, v]) => `<div class="tot"><div class="v">${nf(v.mm / 1000, 2)} m</div><div class="k">${esc(withName(t))} · ${v.n} stk</div></div>`).join("");
       const tbl = (title, o) => Object.keys(o).length ? `<div><span class="label">${title}</span><table class="sumtable">${Object.entries(o).map(([k, n]) => `<tr><td>${esc(withName(k))}</td><td>${n} stk</td></tr>`).join("")}</table></div>` : "";
-      return `<div class="totals">${tiles}</div>${tbl("Innsatser", s.ends)}${tbl("Hylser (2 per slange)", s.ferr)}`;
+      return `<div class="totals">${tiles}</div>${tbl("Innsatser", s.ends)}${tbl("Hylser (2 per slange)", s.ferr)}${downloads || STANDALONE ? `<div class="row"><button class="btn primary" data-a="xlsx">Last ned produksjonsliste (Excel)</button></div>` : ""}`;
     }
     if (m === "hours" && (j.hours || []).length) {
       const h = hourSums(j);
@@ -1240,7 +1354,7 @@ details summary { cursor: pointer; padding: 4px 0; }
         <p class="hint" id="send-msg" aria-live="polite">Sendes direkte fra appen. Svar på e-posten går til ${esc(sbUser.email || "deg")}.</p>` : ""}
       <div class="row"><a class="btn ${sbUser ? "" : "primary"}" id="mailbtn" href="${esc(href)}"${STANDALONE ? "" : ' target="_blank" rel="noopener"'}>Åpne i e-post</a>
       <button class="btn" data-a="copy">Kopier tekst</button>
-      ${downloads || STANDALONE ? `<button class="btn" data-a="csv">Last ned CSV for ordre</button>` : ""}</div>
+      ${downloads || STANDALONE ? `<button class="btn" data-a="csv">Last ned CSV for ordre</button>${(j.hoses || []).length ? `<button class="btn" data-a="xlsx">Produksjonsliste (Excel)</button>` : ""}` : ""}</div>
       <p class="hint">${sbUser ? "Du kan også åpne rapporten i din egen e-postapp eller kopiere teksten." : `«Åpne i e-post» lager en ferdig utfylt e-post i e-postappen din. Fungerer det ikke på enheten${long ? ", eller blir teksten kuttet (lange rapporter kan bli for lange for e-postlenker)" : ""}, trykk «Kopier tekst» og lim inn i en ny e-post.`}</p>
       <div class="row"><button class="btn dark" data-a="marksent">Marker som sendt</button>${to ? `<button class="btn ghost" data-a="defaultto">Bruk som standardadresse</button>` : ""}</div></section>
       ${otBox(j.hours) ? `<section class="panel">${otBox(j.hours)}</section>` : ""}
@@ -1416,15 +1530,16 @@ details summary { cursor: pointer; padding: 4px 0; }
       }
       case "csv": {
         const name = ("ordre-" + (j.kunde || "jobb") + "-" + (j.dato || today())).replace(/[^\wæøåÆØÅ.-]+/g, "_") + ".csv";
-        if (STANDALONE) {
-          const url = URL.createObjectURL(new Blob([csvText(j)], { type: "text/csv;charset=utf-8" }));
-          const link = document.createElement("a"); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 2000);
-          break;
-        }
-        if (!downloads) return;
-        try { await downloads.save({ filename: name, data: csvText(j) }); toast("CSV lagret"); }
-        catch (err) { if (err && err.code !== "declined") toast("Kunne ikke lage filen her."); }
+        await saveFile(name, new Blob([csvText(j)], { type: "text/csv;charset=utf-8" }), "CSV lagret");
+        break;
+      }
+      case "xlsx": {
+        if (!(j.hoses || []).length) { toast("Det er ingen slanger på jobben ennå."); break; }
+        const name = ("slanger-" + (j.kunde || "jobb") + "-" + (j.dato || today())).replace(/[^\wæøåÆØÅ.-]+/g, "_") + ".xlsx";
+        b.disabled = true; const label = b.textContent; b.textContent = "Lager Excel …";
+        try { await saveFile(name, await hoseWorkbook(j), "Excel-filen er lagret"); }
+        catch (err) { toast(navigator.onLine ? "Kunne ikke lage Excel-filen." : "Du må være på nett første gang Excel-filen lages."); }
+        b.disabled = false; b.textContent = label;
         break;
       }
       case "sendmail": {
