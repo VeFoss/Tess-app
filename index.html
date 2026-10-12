@@ -215,6 +215,8 @@ details summary { cursor: pointer; padding: 4px 0; }
   const CLOUD = STANDALONE && !!SB_URL;
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
+  // Bump on every release so devices running a cached copy notice and reload.
+  const APP_VERSION = "2026-10-12.2";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -1202,6 +1204,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     const a = b.dataset.a, j = S.jobs[S.jobId];
     if (a !== "deljob" && a !== "delrow" && a !== "odel" && S.armed) { S.armed = null; }
     switch (a) {
+      case "update": applyUpdate(); break;
       case "signup": authAction("signup"); break;
       case "forgot": authAction("forgot"); break;
       case "logout": logout(); break;
@@ -1354,6 +1357,34 @@ details summary { cursor: pointer; padding: 4px 0; }
       if (t.dataset.f === "kunde") { const h1 = $(".top h1"); if (h1) h1.textContent = j.kunde || "Ny jobb"; }
     }
   });
+
+  // ---------- updates ----------
+  // Phones keep the page in their cache. Compare with the published version and load the new one when it differs.
+  let updateReady = "";
+  async function checkUpdate() {
+    if (!STANDALONE || updateReady || !navigator.onLine) return;
+    try {
+      const res = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) return;
+      const m = (await res.text()).match(/const APP_VERSION = "([^"]+)"/);
+      if (!m || m[1] === APP_VERSION) return;
+      updateReady = m[1];
+      const quiet = S.view === "list" || S.view === "login" || S.view === "boot";
+      if (quiet && !dirty.size && !isTyping()) return applyUpdate();
+      const bar = document.createElement("div");
+      bar.className = "toast"; bar.style.display = "flex"; bar.style.gap = "12px"; bar.style.alignItems = "center";
+      bar.innerHTML = `<span>Ny versjon av appen er klar</span><button class="btn sm primary" data-a="update">Oppdater</button>`;
+      document.body.appendChild(bar);
+    } catch (e) {}
+  }
+  function applyUpdate() {
+    for (const id of [...dirty]) { clearTimeout(timers[id]); flush(id); }
+    saveLocal();
+    setTimeout(() => location.replace(location.pathname + "?v=" + encodeURIComponent(updateReady || Date.now())), 400);
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkUpdate(); });
+  setInterval(checkUpdate, 10 * 60 * 1000);
+  setTimeout(checkUpdate, 4000);
 
   init();
 })();
