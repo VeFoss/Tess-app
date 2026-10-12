@@ -124,6 +124,7 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
 .ac-i b { font: 500 14px var(--f-mono); }
 .ac-i span { font-size: 13px; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ac-i.used b { color: var(--brand); }
+.ac-note { font: 600 11px var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 4px; }
 
 /* Job list */
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -218,7 +219,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-12.5";
+  const APP_VERSION = "2026-10-12.6";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -233,7 +234,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
   let toastT;
-  function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 2600); }
+  function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), Math.max(2600, String(msg).length * 55)); }
 
   // ---------- time codes (TTM) ----------
   const parseTime = (s) => { const [h, m] = String(s || "0:0").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
@@ -296,9 +297,13 @@ details summary { cursor: pointer; padding: 4px 0; }
     }).catch(() => { KAT.state = "failed"; });
   }
   const katName = (nr) => (nr ? KAT.byNr[String(nr).trim().toUpperCase()] || "" : "");
-  function katSearch(q, max) {
+  // Hose dimension is the last two digits after a dash: 5256-04, 6571-122-04, 6501-04 and 65125-04 are all size 04.
+  const dimOf = (nr) => { const m = String(nr || "").trim().match(/-(\d{2})$/); return m ? m[1] : ""; };
+  const sameDim = (nr, dim) => !dim || !dimOf(nr) || dimOf(nr) === dim;
+  function katSearch(q, max, dim) {
     const ql = q.toLowerCase(), first = [], rest = [];
     for (const v of KAT.list) {
+      if (dim && !sameDim(v.nr, dim)) continue;
       const nr = String(v.nr).toLowerCase();
       if (nr.startsWith(ql)) { first.push(v); if (first.length >= max) break; }
       else if (rest.length < max && (nr.includes(ql) || String(v.navn).toLowerCase().includes(ql))) rest.push(v);
@@ -1277,17 +1282,24 @@ details summary { cursor: pointer; padding: 4px 0; }
 
   // ---------- catalogue dropdown ----------
   function closeAc() { const a = $("#ac"); if (a) a.remove(); }
+  // Ends and ferrule follow the dimension of the hose type entered on the same row.
+  const DIM_FIELDS = ["hoses-e1", "hoses-e2", "hoses-hylse"];
+  const hoseDim = () => { const t = $("#hoses-type"); return t ? dimOf(t.value) : ""; };
   function showAc(inp) {
     closeAc();
     const q = inp.value.trim();
-    if (q.length < 2) return;
+    const dim = DIM_FIELDS.includes(inp.id) ? hoseDim() : "";
+    if (q.length < 2 && !dim) return;
     const ql = q.toLowerCase();
-    const used = inp.dataset.mod ? suggestions(inp.dataset.mod, inp.dataset.cat.split(",")).filter((s) => s.toLowerCase().includes(ql) && s.toLowerCase() !== ql).slice(0, 5) : [];
-    const hits = katSearch(q, 30).filter((v) => !used.includes(v.nr));
+    // Empty field: only parts of the right kind in exactly this dimension (ferrules for Hylse, inserts for the ends).
+    const browse = dim && !q;
+    const kind = inp.id === "hoses-hylse" ? /HYLSE/i : /INNSATS/i;
+    const used = inp.dataset.mod ? suggestions(inp.dataset.mod, inp.dataset.cat.split(",")).filter((s) => s.toLowerCase().includes(ql) && s.toLowerCase() !== ql && (browse ? dimOf(s) === dim : sameDim(s, dim))).slice(0, browse ? 8 : 5) : [];
+    const hits = (browse ? KAT.list.filter((v) => dimOf(v.nr) === dim && kind.test(v.navn)).slice(0, 40) : katSearch(q, 30, dim)).filter((v) => !used.includes(v.nr));
     if (!used.length && !hits.length) return;
     const box = document.createElement("div");
     box.className = "ac"; box.id = "ac"; box.dataset.for = inp.id;
-    box.innerHTML = used.map((s) => `<button type="button" class="ac-i used" data-nr="${esc(s)}" data-navn="${esc(katName(s))}"><b>${esc(s)}</b><span>${esc(katName(s) || "Brukt før")}</span></button>`).join("") +
+    box.innerHTML = (dim ? `<div class="ac-note">Viser dimensjon ${esc(dim)}</div>` : "") + used.map((s) => `<button type="button" class="ac-i used" data-nr="${esc(s)}" data-navn="${esc(katName(s))}"><b>${esc(s)}</b><span>${esc(katName(s) || "Brukt før")}</span></button>`).join("") +
       hits.map((v) => `<button type="button" class="ac-i" data-nr="${esc(v.nr)}" data-navn="${esc(v.navn)}"><b>${esc(v.nr)}</b><span>${esc(v.navn)}</span></button>`).join("");
     inp.parentElement.appendChild(box);
   }
@@ -1472,6 +1484,17 @@ details summary { cursor: pointer; padding: 4px 0; }
     const o = readForm(form, MODS[m].fields);
     const miss = MODS[m].fields.filter((f) => f.req && !o[f.k]);
     if (miss.length) { toast("Fyll ut: " + miss.map((f) => f.l).join(", ")); const el = form.elements[miss[0].k]; if (el) el.focus(); return; }
+    if (m === "hoses") {
+      const dim = dimOf(o.type);
+      const wrong = [["Ende 1", o.e1], ["Ende 2", o.e2], ["Hylse", o.hylse]].filter(([, v]) => v && !sameDim(v, dim));
+      const sig = wrong.map(([, v]) => v).join("|") + "@" + dim;
+      if (wrong.length && S.dimOk !== sig) {
+        S.dimOk = sig;
+        toast(`${wrong.map(([k, v]) => k + " " + v).join(", ")} har en annen dimensjon enn slangen (${dim}). Trykk «Legg til» igjen for å lagre likevel.`);
+        return;
+      }
+      S.dimOk = "";
+    }
     if (m === "items" && !o.nr && !o.desc) { toast("Skriv inn varenr. eller beskrivelse"); $("#items-nr").focus(); return; }
     if (m === "items" && o.nr && !o.desc) o.desc = katName(o.nr);
     let add = [o];
@@ -1492,6 +1515,9 @@ details summary { cursor: pointer; padding: 4px 0; }
     const focusId = { hoses: "hoses-len", items: "items-nr", hours: "hours-from" }[m];
     const f2 = focusId && $("#" + focusId); if (f2) f2.focus();
   });
+
+  // Empty end or ferrule field: show the parts in the hose dimension straight away.
+  document.addEventListener("focusin", (e) => { const t = e.target; if (t && DIM_FIELDS.includes(t.id) && !t.value.trim()) showAc(t); });
 
   document.addEventListener("change", (e) => {
     if (e.target.id === "i-owner" && S.jobs[S.jobId]) { assignJob(S.jobs[S.jobId], e.target.value); S.keepScroll = true; render(); }
