@@ -223,7 +223,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-13.1";
+  const APP_VERSION = "2026-10-13.2";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -412,7 +412,7 @@ details summary { cursor: pointer; padding: 4px 0; }
 
   // ---------- state ----------
   const S = { jobs: {}, orders: [], ordersUpdated: 0, settings: { type: "settings", email: "", tech: "" }, view: "list", home: "jobs", jobId: null, tab: "info", filter: "aktive", tfilter: "alle", ofilter: "alle", ufilter: "alle", q: "", edit: null, mode: "loading", saveState: "", armed: null,
-    profiles: [], isAdmin: false, ownerOf: {}, moveFrom: {} };
+    profiles: [], isAdmin: false, ownerOf: {}, moveFrom: {}, base: {} };
   let col = null, downloads = null;
   const dirty = new Set(), timers = {}, inflight = {}, again = {};
 
@@ -428,6 +428,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       lsSet(prefix + "pending", JSON.stringify([...pending]));
       lsSet(prefix + "moves", JSON.stringify({ ownerOf: S.ownerOf, moveFrom: S.moveFrom }));
       lsSet(prefix + "profiles", JSON.stringify(S.profiles));
+      lsSet(prefix + "base", JSON.stringify(S.base));
     }
   }
   function loadLocal() {
@@ -443,7 +444,61 @@ details summary { cursor: pointer; padding: 4px 0; }
     S.ownerOf = {}; S.moveFrom = {}; S.profiles = [];
     try { const m = JSON.parse(lsGet(prefix + "moves") || "null"); if (m) { S.ownerOf = m.ownerOf || {}; S.moveFrom = m.moveFrom || {}; } } catch (e) {}
     try { const p = JSON.parse(lsGet(prefix + "profiles") || "[]"); if (Array.isArray(p)) S.profiles = p; } catch (e) {}
+    S.base = {};
+    try { const b = JSON.parse(lsGet(prefix + "base") || "{}"); if (b && typeof b === "object") S.base = b; } catch (e) {}
+    for (const j of Object.values(S.jobs)) ensureRids(j);
+    for (const j of Object.values(S.base)) ensureRids(j);
     moveJobOrders();
+  }
+
+  // ---------- merging ----------
+  // Two people (or two devices) can change the same job before it syncs. Instead of the last save winning the whole
+  // job, the server version is merged with mine: rows by their id, other fields one by one, against the last version
+  // both sides agreed on (S.base). What I changed since then wins; everything else comes from the server.
+  const ROW_LISTS = ["hoses", "items", "hours", "orders", "photos"];
+  const newRid = () => "r" + uid8();
+  function hashStr(str) { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+  // Rows from before ids existed get one computed from content and position, so every device arrives at the same id.
+  function ensureRids(job) {
+    if (!job || job.type !== "job") return job;
+    for (const k of ROW_LISTS) (job[k] || []).forEach((r, i) => { if (r && !r.rid && !r.id) r.rid = "L" + hashStr(k + i + JSON.stringify(r)); });
+    return job;
+  }
+  const ridOf = (r) => r.rid || r.id;
+  const same = (a, b) => JSON.stringify(a === undefined ? null : a) === JSON.stringify(b === undefined ? null : b);
+  function mergeJob(base, mine, theirs) {
+    const out = {};
+    const keys = new Set([...Object.keys(mine), ...Object.keys(theirs), ...Object.keys(base || {})]);
+    for (const k of keys) {
+      if (ROW_LISTS.includes(k) || k === "updated" || k === "owner") continue;
+      const v = !base ? (k in mine ? mine[k] : theirs[k]) : !same(mine[k], base[k]) ? mine[k] : theirs[k];
+      if (v !== undefined) out[k] = v;
+    }
+    for (const k of ROW_LISTS) {
+      const m = mine[k] || [], t = theirs[k] || [];
+      if (!mine[k] && !theirs[k]) continue;
+      const bm = base ? new Map((base[k] || []).map((r) => [ridOf(r), r])) : null;
+      const mm = new Map(m.map((r) => [ridOf(r), r])), tm = new Map(t.map((r) => [ridOf(r), r]));
+      const pick = (id) => {
+        const bi = bm && bm.get(id), mi = mm.get(id), ti = tm.get(id);
+        if (!bm || !bi) return mi || ti;                      // no common version, or added on one side
+        if (!mi) return ti && !same(ti, bi) ? ti : null;      // I deleted it (kept if they changed it meanwhile)
+        if (!ti) return !same(mi, bi) ? mi : null;            // they deleted it (kept if I changed it meanwhile)
+        return !same(mi, bi) ? mi : ti;
+      };
+      // My order, with rows that are new from the other side placed after their neighbour there.
+      const order = m.map(ridOf);
+      t.forEach((r, i) => {
+        const id = ridOf(r);
+        if (order.includes(id)) return;
+        const at = i > 0 ? order.indexOf(ridOf(t[i - 1])) : -1;
+        order.splice(at + 1, 0, id);
+      });
+      out[k] = order.map(pick).filter(Boolean);
+    }
+    out.updated = Math.max(mine.updated || 0, theirs.updated || 0) + 1;
+    if (mine.owner) out.owner = mine.owner;
+    return out;
   }
   // Orders used to live in one list per user with a jobId. They now live inside each job so whoever the job
   // belongs to sees them. Move any old ones across (also when an older app version on another device adds some).
@@ -510,7 +565,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   }
   function touch(id) {
     const job = S.jobs[id];
-    if (job) job.updated = Date.now();
+    if (job) { job.updated = Date.now(); ensureRids(job); }
     if (id === "settings") S.settings.updated = Date.now();
     if (id === "orders") S.ordersUpdated = Date.now();
     dirty.add(id);
@@ -619,9 +674,13 @@ details summary { cursor: pointer; padding: 4px 0; }
     syncing = true;
     setSave("sync");
     try {
+      const pulled = await sb.from("docs").select("user_id,id,data,updated,deleted").range(0, 9999);
+      if (pulled.error) throw pulled.error;
+      let changed = mergeRemote(pulled.data || []);
+      if (moveJobOrders()) changed = true;
       const ids = [...pending];
       if (ids.length) {
-        const sent = {}, rows = [];
+        const sent = {}, sentBody = {}, rows = [];
         for (const id of ids) {
           const b = docBody(id);
           const updated = (b && b.updated) || Date.now();
@@ -631,6 +690,7 @@ details summary { cursor: pointer; padding: 4px 0; }
           const owner = shared ? sbUser.id : b ? ownerOf(b) : S.ownerOf[id] || sbUser.id;
           const data = b ? clone(b) : {};
           if (b && !shared) delete data.owner;
+          sentBody[id] = b ? clone(data) : null;
           rows.push({ user_id: owner, id, data, updated, deleted: !b });
           // Reassigned: leave a deletion marker with the previous owner so it disappears from their list.
           const from = !shared && S.moveFrom[id];
@@ -641,12 +701,10 @@ details summary { cursor: pointer; padding: 4px 0; }
         for (const id of ids) {
           const b = docBody(id);
           if (!dirty.has(id) && ((b && b.updated) || sent[id]) === sent[id]) { pending.delete(id); delete S.moveFrom[id]; delete S.ownerOf[id]; }
+          // What the server now holds is the common version for the next merge.
+          if (id !== "settings" && id !== "orders") { if (sentBody[id]) S.base[id] = sentBody[id]; else delete S.base[id]; }
         }
       }
-      const { data, error } = await sb.from("docs").select("user_id,id,data,updated,deleted").range(0, 9999);
-      if (error) throw error;
-      let changed = mergeRemote(data || []);
-      if (moveJobOrders()) changed = true;
       await syncProfiles();
       saveLocal();
       setSave(pending.size ? "saving" : "synced");
@@ -671,13 +729,30 @@ details summary { cursor: pointer; padding: 4px 0; }
     }
     for (const r of Object.values(best)) {
       seen.add(r.id);
-      if (pending.has(r.id) || dirty.has(r.id)) continue;
       const up = Number(r.updated) || 0;
+      const isJob = r.id !== "settings" && r.id !== "orders";
+      if (pending.has(r.id) || dirty.has(r.id)) {
+        // A job I have unsent changes to: if the server version moved on since our common version, merge the two.
+        const cur = S.jobs[r.id];
+        if (isJob && !dirty.has(r.id) && !r.deleted && cur && r.data && r.data.type === "job") {
+          const base = S.base[r.id] || null;
+          if (up > ((base && base.updated) || 0)) {
+            const theirs = ensureRids(clone(r.data));
+            const merged = mergeJob(base, cur, theirs);
+            merged.owner = cur.owner || r.user_id;
+            S.jobs[r.id] = merged;
+            S.base[r.id] = theirs;
+            changed = true;
+          }
+        }
+        continue;
+      }
       if (r.id === "settings") { if (!r.deleted && up > (S.settings.updated || 0)) { S.settings = Object.assign({ type: "settings", email: "", tech: "" }, r.data); changed = true; } continue; }
       if (r.id === "orders") { if (!r.deleted && up > (S.ordersUpdated || 0)) { S.orders = (r.data && r.data.list) || []; S.ordersUpdated = up; changed = true; } continue; }
       const cur = S.jobs[r.id];
-      if (r.deleted) { if (cur) { delete S.jobs[r.id]; if (S.jobId === r.id) { S.view = "list"; S.jobId = null; } changed = true; } continue; }
-      if (!cur || up > (cur.updated || 0) || ownerOf(cur) !== r.user_id) { S.jobs[r.id] = Object.assign({}, r.data, { owner: r.user_id }); changed = true; }
+      if (r.deleted) { delete S.base[r.id]; if (cur) { delete S.jobs[r.id]; if (S.jobId === r.id) { S.view = "list"; S.jobId = null; } changed = true; } continue; }
+      if (!cur || up > (cur.updated || 0) || ownerOf(cur) !== r.user_id) { S.jobs[r.id] = ensureRids(Object.assign({}, r.data, { owner: r.user_id })); changed = true; }
+      if (!S.base[r.id] || up >= (S.base[r.id].updated || 0)) S.base[r.id] = ensureRids(clone(r.data));
     }
     // Anything here that the server has never seen gets uploaded.
     for (const id of Object.keys(S.jobs)) if (!seen.has(id)) pending.add(id);
@@ -1377,7 +1452,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     return o;
   }
   function rowHtml(m, r, i, isEdit) {
-    const acts = `<span class="acts"><button class="btn sm" data-a="editrow" data-m="${m}" data-i="${i}">Endre</button><button class="btn sm danger ${S.armed === m + i ? "armed" : ""}" data-a="delrow" data-m="${m}" data-i="${i}" aria-label="Slett rad">${S.armed === m + i ? "Slett?" : "×"}</button></span>`;
+    const acts = `<span class="acts">${m === "hoses" ? `<button class="btn sm" data-a="copyrow" data-i="${i}" title="Legg inn en lik slange under">Kopier</button>` : ""}<button class="btn sm" data-a="editrow" data-m="${m}" data-i="${i}">Endre</button><button class="btn sm danger ${S.armed === m + i ? "armed" : ""}" data-a="delrow" data-m="${m}" data-i="${i}" aria-label="Slett rad">${S.armed === m + i ? "Slett?" : "×"}</button></span>`;
     let tag = "", main = "";
     if (m === "hoses") {
       tag = esc(r.pos || "–");
@@ -1564,6 +1639,15 @@ details summary { cursor: pointer; padding: 4px 0; }
         S.armed = null; S.ownerOf[j.id] = ownerOf(j); delete S.jobs[j.id]; dirty.add(j.id); flush(j.id);
         S.view = "list"; S.jobId = null; render(); toast("Jobben er slettet"); break;
       case "editrow": S.edit = { mod: b.dataset.m, idx: +b.dataset.i }; render(); window.scrollTo(0, 0); break;
+      case "copyrow": {
+        const i = +b.dataset.i, src = j.hoses[i];
+        if (!src) break;
+        const ps = j.hoses.map((h) => parseInt(h.pos, 10)).filter((x) => isFinite(x));
+        const copy = Object.assign(clone(src), { rid: newRid(), pos: ps.length ? String(Math.max.apply(null, ps) + 1) : src.pos });
+        j.hoses.splice(i + 1, 0, copy);
+        S.edit = null; touch(j.id); toast("Kopiert som pos " + (copy.pos || "")); S.keepScroll = true; render();
+        break;
+      }
       case "canceledit": S.edit = null; render(); break;
       case "delrow": {
         const key = b.dataset.m + b.dataset.i;
@@ -1691,6 +1775,8 @@ details summary { cursor: pointer; padding: 4px 0; }
       add = parts.map((p) => ({ date: o.date, from: p.fra, to: p.til, min: p.min, kode: p.kode, tech: o.tech, desc: o.desc }));
     }
     j[m] = j[m] || [];
+    const oldRow = S.edit && S.edit.mod === m ? j[m][S.edit.idx] : null;
+    add.forEach((r, k) => { r.rid = k === 0 && oldRow && ridOf(oldRow) ? ridOf(oldRow) : newRid(); });
     if (S.edit && S.edit.mod === m) { j[m].splice(S.edit.idx, 1, ...add); S.edit = null; toast("Endringen er lagret"); }
     else {
       j[m].push(...add);
