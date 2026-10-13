@@ -192,6 +192,15 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
 .addgrp summary { cursor: pointer; font-weight: 600; color: var(--muted); padding: 4px 0; }
 .addgrp[open] summary { color: var(--ink); }
 .form.form3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.photos { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 2px; }
+.photos .ph { margin: 0; width: 64px; }
+.photos.big .ph { width: calc(33.333% - 6px); min-width: 96px; }
+.ph-open { padding: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--sunk); width: 100%; aspect-ratio: 1; display: block; cursor: pointer; }
+.ph-open img { width: 100%; height: 100%; object-fit: cover; display: block; font-size: 10px; color: var(--muted); }
+.ph figcaption { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 12px; color: var(--muted); margin-top: 4px; }
+.linkbtn { border: 0; background: none; color: var(--brand); font-weight: 600; padding: 4px 0; cursor: pointer; font-size: 14px; }
+.lightbox { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.88); display: grid; place-items: center; gap: 12px; padding: 16px; padding-top: calc(env(safe-area-inset-top, 0px) + 16px); }
+.lightbox img { max-width: 100%; max-height: calc(100vh - 120px); object-fit: contain; border-radius: 6px; }
 .mailframe { width: 100%; height: 640px; border: 1px solid var(--line); border-radius: 8px; background: #eef1ec; display: block; }
 details summary { cursor: pointer; padding: 4px 0; }
 .toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-weight: 600; z-index: 20; max-width: calc(100% - 32px); }
@@ -223,7 +232,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-13.2";
+  const APP_VERSION = "2026-10-13.3";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -705,6 +714,7 @@ details summary { cursor: pointer; padding: 4px 0; }
           if (id !== "settings" && id !== "orders") { if (sentBody[id]) S.base[id] = sentBody[id]; else delete S.base[id]; }
         }
       }
+      await uploadPhotos();
       await syncProfiles();
       saveLocal();
       setSave(pending.size ? "saving" : "synced");
@@ -885,7 +895,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   }
   const withName = (code) => { const n = katName(code); return n ? code + " " + n : code; };
 
-  function summaryText(job) {
+  function summaryText(job, photoCount) {
     const L = [];
     const line = (s) => L.push(s);
     const hr = () => line("");
@@ -943,10 +953,11 @@ details summary { cursor: pointer; padding: 4px 0; }
       for (const o of ord) line(`  ${qtyStr(o.antall)} ${o.enhet || "stk"}  ${o.navn}${o.lev ? "  (" + o.lev + ")" : ""}${o.merk ? "  – " + o.merk : ""}  [${ORDER_STATUS[o.status] || "Venter"}]`);
     }
     if (job.notes) { hr(); line("NOTATER / AVVIK"); line(job.notes); }
+    if (photoCount) { hr(); line(`BILDER: ${photoCount} vedlagt`); }
     return L.join("\n");
   }
   // Formatted e-mail version of the report. Table layout with inline styles so it holds up in Outlook, Gmail and phone mail apps.
-  function summaryHtml(job) {
+  function summaryHtml(job, shots) {
     const G = "#2b7a3b", INK = "#1b211c", MUT = "#5e6a60", LINE = "#dfe4dc", SOFT = "#f3f6f1", AMBER = "#9a5a08", AMBER_BG = "#fdf3e2";
     const F = "font-family:Arial,Helvetica,sans-serif;";
     const e = (v) => esc(v == null ? "" : v);
@@ -1022,6 +1033,8 @@ details summary { cursor: pointer; padding: 4px 0; }
       out.push(section("Må bestilles", table(th("Vare") + th("Antall", R) + th("Leverandør") + th("Status"), rows)));
     }
 
+    // Photos (inline, attached with a content id)
+    if (shots && shots.length) out.push(section("Bilder", `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${shots.map((p, i) => `${i && i % 2 === 0 ? "</tr><tr>" : ""}<td width="50%" style="padding:4px;vertical-align:top"><img src="cid:${e(p.cid)}" width="300" style="width:100%;max-width:300px;height:auto;border-radius:6px;display:block" alt="${e(p.caption)}"><div style="${F}font-size:12px;color:${MUT};margin-top:4px">${e(p.caption)}</div></td>`).join("")}</tr></table>`));
     // Notes
     if (job.notes) out.push(section("Notater og avvik", `<div style="${F}font-size:14px;line-height:1.55;color:${INK};background:${SOFT};border-left:4px solid ${G};padding:12px 14px;border-radius:0 6px 6px 0">${e(job.notes).replace(/\n/g, "<br>")}</div>`));
 
@@ -1212,6 +1225,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     else if (S.view === "settings") app.innerHTML = settingsView();
     else { S.view = "list"; app.innerHTML = S.home === "orders" ? ordersView() : listView(); }
     setSave(S.saveState);
+    hydratePhotos();
     if (S.keepScroll) window.scrollTo(0, y);
     S.keepScroll = false;
   }
@@ -1356,7 +1370,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   }
 
   function jobView(j) {
-    const counts = { hoses: (j.hoses || []).length, items: (j.items || []).length, hours: hourSums(j).tot ? fmtMin(hourSums(j).tot) : 0, orders: jobOrders(j.id).filter((o) => o.status !== "mottatt").length };
+    const counts = { hoses: (j.hoses || []).length, items: (j.items || []).length, hours: hourSums(j).tot ? fmtMin(hourSums(j).tot) : 0, orders: jobOrders(j.id).filter((o) => o.status !== "mottatt").length, notes: (j.photos || []).length };
     const tabs = `<nav class="tabs"><div class="tabs-in" role="tablist">${TABS.map(([k, l]) => `<button class="tab" role="tab" data-a="tab" data-v="${k}" aria-selected="${S.tab === k}">${ICONS[k]}<span>${l}</span>${counts[k] ? `<span class="c">${counts[k]}</span>` : ""}</button>`).join("")}</div></nav>`;
     let content;
     if (S.tab === "info") content = infoTab(j);
@@ -1412,8 +1426,115 @@ details summary { cursor: pointer; padding: 4px 0; }
       <div><button class="btn danger ${S.armed === "del" ? "armed" : ""}" data-a="deljob">${S.armed === "del" ? "Trykk igjen for å slette" : "Slett jobben"}</button></div></section>`;
   }
 
+  // ---------- photos ----------
+  // A photo is shrunk on the device, kept in IndexedDB so it works offline, and uploaded to the Supabase bucket
+  // "photos" at <job id>/<photo id>.jpg on the next sync. The job only holds the list of photos.
+  let idbP = null;
+  function idb() {
+    return idbP || (idbP = new Promise((res, rej) => {
+      const r = indexedDB.open("tess-photos", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("blobs");
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+  }
+  async function idbDo(mode, fn) {
+    const db = await idb();
+    return new Promise((res, rej) => { const t = db.transaction("blobs", mode); const req = fn(t.objectStore("blobs")); t.oncomplete = () => res(req && req.result); t.onerror = () => rej(t.error); });
+  }
+  const idbPut = (k, v) => idbDo("readwrite", (st) => st.put(v, k)).catch(() => {});
+  const idbGet = (k) => idbDo("readonly", (st) => st.get(k)).catch(() => null);
+  const idbDel = (k) => idbDo("readwrite", (st) => st.delete(k)).catch(() => {});
+  const photoPath = (jobId, p) => `${jobId}/${p.id}.jpg`;
+  async function shrinkImage(file) {
+    const img = await new Promise((res, rej) => { const u = URL.createObjectURL(file); const i = new Image(); i.onload = () => { URL.revokeObjectURL(u); res(i); }; i.onerror = () => { URL.revokeObjectURL(u); rej(new Error("bilde")); }; i.src = u; });
+    const sc = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.naturalWidth * sc); c.height = Math.round(img.naturalHeight * sc);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return new Promise((res) => c.toBlob(res, "image/jpeg", 0.8));
+  }
+  function pickPhotos(job, hose) {
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.accept = "image/*"; inp.multiple = true; inp.hidden = true;
+    inp.onchange = async () => {
+      const files = [...(inp.files || [])]; inp.remove();
+      if (!files.length) return;
+      toast(files.length > 1 ? "Lagrer " + files.length + " bilder …" : "Lagrer bildet …");
+      let n = 0;
+      for (const f of files) {
+        try {
+          const blob = await shrinkImage(f);
+          const p = { id: "p" + uid8(), hose: hose || "", created: Date.now(), by: myId(), up: false };
+          await idbPut(p.id, blob);
+          photoUrls[p.id] = URL.createObjectURL(blob);
+          job.photos = (job.photos || []).concat([p]); n++;
+        } catch (e) {}
+      }
+      if (n) { touch(job.id); toast(n === 1 ? "Bildet er lagt til" : n + " bilder er lagt til"); S.keepScroll = true; render(); }
+      else toast("Kunne ikke lese bildet.");
+    };
+    document.body.appendChild(inp); inp.click();
+  }
+  // Upload photos taken on this device that are not in the bucket yet.
+  async function uploadPhotos() {
+    if (!sb || !navigator.onLine) return;
+    for (const job of Object.values(S.jobs)) {
+      if (!job || job.type !== "job" || pending.has(job.id)) continue;
+      let did = false;
+      for (const p of job.photos || []) {
+        if (p.up) continue;
+        const blob = await idbGet(p.id);
+        if (!blob) continue;
+        const { error } = await sb.storage.from("photos").upload(photoPath(job.id, p), blob, { contentType: "image/jpeg", upsert: true });
+        if (!error) { p.up = true; did = true; }
+      }
+      if (did) touch(job.id);
+    }
+  }
+  const photoUrls = {};
+  async function photoBlob(jobId, p) {
+    const local = await idbGet(p.id);
+    if (local) return local;
+    if (!sb || !p.up) return null;
+    const { data, error } = await sb.storage.from("photos").download(photoPath(jobId, p));
+    if (error || !data) return null;
+    idbPut(p.id, data);
+    return data;
+  }
+  // Thumbnails are rendered empty and filled in afterwards (from this device, or fetched from the bucket).
+  async function hydratePhotos() {
+    for (const img of document.querySelectorAll("img[data-pid]")) {
+      if (img.src) continue;
+      const pid = img.dataset.pid, job = S.jobs[img.dataset.job];
+      const p = job && (job.photos || []).find((x) => x.id === pid);
+      if (!p) continue;
+      if (!photoUrls[pid]) { const b = await photoBlob(job.id, p); if (b) photoUrls[pid] = URL.createObjectURL(b); }
+      if (photoUrls[pid]) img.src = photoUrls[pid];
+      else img.alt = p.up ? "Kunne ikke hente bildet" : "Lastes opp fra en annen enhet";
+    }
+  }
+  const hoseLabel = (job, rid) => { const h = (job.hoses || []).find((x) => ridOf(x) === rid); return h ? "Pos " + (h.pos || "–") : ""; };
+  function photoThumbs(job, list, big) {
+    return `<div class="photos${big ? " big" : ""}">${list.map((p) => `<figure class="ph"><button type="button" class="ph-open" data-a="viewphoto" data-pid="${esc(p.id)}" aria-label="Vis bildet"><img data-job="${esc(job.id)}" data-pid="${esc(p.id)}" alt=""></button>
+      ${big ? `<figcaption><span>${esc(p.hose ? hoseLabel(job, p.hose) || "Slange" : "Jobb")}</span><button type="button" class="btn sm danger ${S.armed === "ph" + p.id ? "armed" : ""}" data-a="delphoto" data-pid="${esc(p.id)}" aria-label="Slett bildet">${S.armed === "ph" + p.id ? "Slett?" : "×"}</button></figcaption>` : ""}</figure>`).join("")}</div>`;
+  }
+  function photosPanel(j) {
+    const list = j.photos || [];
+    return `<section class="panel"><div class="row"><h2 class="grow">Bilder</h2><button class="btn primary" data-a="addphoto" data-hose="">+ Legg til bilde</button></div>
+      ${list.length ? photoThumbs(j, list, true) : `<p class="hint">Ingen bilder ennå. Bilder til en bestemt slange legger du til fra slangeraden under Slanger.</p>`}
+      ${list.length ? `<p class="hint">Bildene legges ved når du sender rapporten.</p>` : ""}</section>`;
+  }
+  function showPhoto(pid) {
+    const url = photoUrls[pid];
+    if (!url) { toast("Bildet er ikke hentet ennå."); return; }
+    const box = document.createElement("div");
+    box.className = "lightbox"; box.dataset.a = "closephoto";
+    box.innerHTML = `<img src="${url}" alt="Bilde"><button class="btn" data-a="closephoto">Lukk</button>`;
+    document.body.appendChild(box);
+  }
+
   function notesTab(j) {
-    return `<section class="panel"><h2>Notater og avvik</h2><div class="form">${fieldHtml({ k: "notes", l: "Notater", w: 4, area: true, ph: "Avvik, anbefalinger, ting som må følges opp …" }, j.notes, "n-")}</div><p class="hint">Teksten tas med nederst i rapporten.</p></section>`;
+    return photosPanel(j) + `<section class="panel"><h2>Notater og avvik</h2><div class="form">${fieldHtml({ k: "notes", l: "Notater", w: 4, area: true, ph: "Avvik, anbefalinger, ting som må følges opp …" }, j.notes, "n-")}</div><p class="hint">Teksten tas med nederst i rapporten.</p></section>`;
   }
 
   function modTab(j, m) {
@@ -1457,7 +1578,8 @@ details summary { cursor: pointer; padding: 4px 0; }
     if (m === "hoses") {
       tag = esc(r.pos || "–");
       main = `<strong>${esc(r.type)}</strong>${katName(r.type) ? ` <span class="d">${esc(katName(r.type))}</span>` : ""} · <span class="num">${nf(r.len, 0)} mm</span>${num(r.qty) > 1 ? ` <span class="num">×${esc(r.qty)}</span>` : ""}
-        <div class="d">${esc([[r.utstyr, r.sted].filter(Boolean).join(", "), (r.e1 || r.e2) && (r.e1 || "–") + " / " + (r.e2 || "–"), r.hylse && "Hylse " + r.hylse, addText(r), r.bar && r.bar + " bar", r.note].filter(Boolean).join(" · "))}</div>`;
+        <div class="d">${esc([[r.utstyr, r.sted].filter(Boolean).join(", "), (r.e1 || r.e2) && (r.e1 || "–") + " / " + (r.e2 || "–"), r.hylse && "Hylse " + r.hylse, addText(r), r.bar && r.bar + " bar", r.note].filter(Boolean).join(" · "))}</div>
+        ${(() => { const job = S.jobs[S.jobId], ph = job ? (job.photos || []).filter((p) => p.hose && p.hose === ridOf(r)) : []; return (ph.length ? photoThumbs(job, ph, false) : "") + `<button type="button" class="linkbtn" data-a="addphoto" data-hose="${esc(ridOf(r) || "")}">+ Bilde</button>`; })()}`;
     } else if (m === "items") {
       tag = `<span class="num">${qtyStr(r.qty)}</span>`;
       main = `<strong>${esc(itemName(r))}</strong> <span class="d">${esc(r.unit || "stk")}</span><div class="d">${esc([r.nr && r.nr !== itemName(r) ? r.nr : "", r.note].filter(Boolean).join(" · "))}</div>`;
@@ -1495,7 +1617,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     return `<section class="panel"><h2>Send rapport</h2>
       <div class="form">${fieldHtml({ k: "sendTo", l: "Send til e-post", w: 4, bind: true, type: "email", ph: "ordre@firma.no" }, to, "s-")}</div>
       ${sbUser ? `<div class="row"><button class="btn primary" data-a="sendmail" id="sendbtn">Send rapport</button>
-        <label class="row" for="s-csv" style="gap:6px"><input type="checkbox" id="s-csv" checked> Legg ved CSV for ordre</label>${(j.hoses || []).length ? `<label class="row" for="s-xlsx" style="gap:6px"><input type="checkbox" id="s-xlsx" checked> Legg ved produksjonsliste (Excel)</label>` : ""}</div>
+        <label class="row" for="s-csv" style="gap:6px"><input type="checkbox" id="s-csv" checked> Legg ved CSV for ordre</label>${(j.hoses || []).length ? `<label class="row" for="s-xlsx" style="gap:6px"><input type="checkbox" id="s-xlsx" checked> Legg ved produksjonsliste (Excel)</label>` : ""}${(j.photos || []).length ? `<label class="row" for="s-photos" style="gap:6px"><input type="checkbox" id="s-photos" checked> Legg ved bilder (${(j.photos || []).length})</label>` : ""}</div>
         <p class="hint" id="send-msg" aria-live="polite">Sendes direkte fra appen. Svar på e-posten går til ${esc(sbUser.email || "deg")}.</p>` : ""}
       <div class="row"><a class="btn ${sbUser ? "" : "primary"}" id="mailbtn" href="${esc(href)}"${STANDALONE ? "" : ' target="_blank" rel="noopener"'}>Åpne i e-post</a>
       <button class="btn" data-a="copy">Kopier tekst</button>
@@ -1610,7 +1732,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     const b = e.target.closest("[data-a]");
     if (!b) return;
     const a = b.dataset.a, j = S.jobs[S.jobId];
-    if (a !== "deljob" && a !== "delrow" && a !== "odel" && S.armed) { S.armed = null; }
+    if (a !== "deljob" && a !== "delrow" && a !== "odel" && a !== "delphoto" && S.armed) { S.armed = null; }
     switch (a) {
       case "update": applyUpdate(); break;
       case "signup": authAction("signup"); break;
@@ -1636,9 +1758,27 @@ details summary { cursor: pointer; padding: 4px 0; }
       case "jtype": j.jtype = b.dataset.v; touch(j.id); S.keepScroll = true; render(); break;
       case "deljob":
         if (S.armed !== "del") { S.armed = "del"; S.keepScroll = true; render(); return; }
-        S.armed = null; S.ownerOf[j.id] = ownerOf(j); delete S.jobs[j.id]; dirty.add(j.id); flush(j.id);
+        S.armed = null; S.ownerOf[j.id] = ownerOf(j);
+        if ((j.photos || []).length) { const paths = j.photos.filter((p) => p.up).map((p) => photoPath(j.id, p)); if (paths.length && sb) sb.storage.from("photos").remove(paths).catch(() => {}); j.photos.forEach((p) => idbDel(p.id)); }
+        delete S.jobs[j.id]; dirty.add(j.id); flush(j.id);
         S.view = "list"; S.jobId = null; render(); toast("Jobben er slettet"); break;
       case "editrow": S.edit = { mod: b.dataset.m, idx: +b.dataset.i }; render(); window.scrollTo(0, 0); break;
+      case "addphoto": pickPhotos(j, b.dataset.hose || ""); break;
+      case "viewphoto": showPhoto(b.dataset.pid); break;
+      case "closephoto": { const lb = document.querySelector(".lightbox"); if (lb) lb.remove(); break; }
+      case "delphoto": {
+        const key = "ph" + b.dataset.pid;
+        if (S.armed !== key) { S.armed = key; S.keepScroll = true; render(); return; }
+        S.armed = null;
+        const p = (j.photos || []).find((x) => x.id === b.dataset.pid);
+        if (p) {
+          j.photos = j.photos.filter((x) => x.id !== p.id);
+          idbDel(p.id);
+          if (p.up && sb) sb.storage.from("photos").remove([photoPath(j.id, p)]).catch(() => {});
+          touch(j.id);
+        }
+        S.keepScroll = true; render(); break;
+      }
       case "copyrow": {
         const i = +b.dataset.i, src = j.hoses[i];
         if (!src) break;
@@ -1706,7 +1846,22 @@ details summary { cursor: pointer; padding: 4px 0; }
             files.push({ name: name.replace(/^ordre-/, "produksjon-").replace(/\.csv$/, ".xlsx"), base64: b64, type: blob.type });
             say("Sender rapporten …");
           }
-          const { data, error } = await sb.functions.invoke(SEND_FN, { body: { to, subject: mailSubject(j), text: summaryText(j), html: summaryHtml(j), csv: withCsv ? csvText(j) : "", csvName: name, files } });
+          const shots = [];
+          if ($("#s-photos") && $("#s-photos").checked) {
+            say("Henter bildene …");
+            let k = 0;
+            for (const p of j.photos || []) {
+              const blob = await photoBlob(j.id, p);
+              if (!blob) continue;
+              const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.onerror = rej; r.readAsDataURL(blob); });
+              const caption = p.hose ? hoseLabel(j, p.hose) || "Slange" : "Jobb";
+              k++;
+              files.push({ name: `bilde-${k}-${caption.replace(/[^\wæøåÆØÅ]+/g, "")}.jpg`, base64: b64, type: "image/jpeg", cid: p.id });
+              shots.push({ cid: p.id, caption });
+            }
+            say("Sender rapporten …");
+          }
+          const { data, error } = await sb.functions.invoke(SEND_FN, { body: { to, subject: mailSubject(j), text: summaryText(j, shots.length), html: summaryHtml(j, shots), csv: withCsv ? csvText(j) : "", csvName: name, files } });
           if (error || !data || !data.ok) {
             let code = data && data.error;
             if (!code && error && error.context && error.context.json) { try { code = (await error.context.json()).error; } catch (x) {} }

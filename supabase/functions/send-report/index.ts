@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
   let body: {
     to?: string; subject?: string; text?: string; html?: string; csv?: string; csvName?: string;
-    files?: { name?: string; base64?: string; type?: string }[];
+    files?: { name?: string; base64?: string; type?: string; cid?: string }[];
   };
   try { body = await req.json(); } catch { return json({ error: "bad_request" }, 400); }
 
@@ -42,16 +42,18 @@ Deno.serve(async (req) => {
   // Formatted version built by the app; the plain text above goes along as the fallback.
   const html = body.html && String(body.html).length <= 500_000 ? String(body.html) : undefined;
 
-  // Attachments: the CSV as text, plus binary files (e.g. the Excel production list) as base64. Max 5 files, 5 MB.
-  const attachments: { filename: string; content: string; encoding?: string; contentType: string }[] = [];
+  // Attachments: the CSV as text, plus binary files (Excel production list, photos) as base64. Max 40 files, 18 MB.
+  // A file with a content id (cid) can be shown inside the HTML with <img src="cid:...">.
+  const attachments: { filename: string; content: string; encoding?: string; contentType: string; cid?: string }[] = [];
   if (body.csv) attachments.push({ filename: String(body.csvName || "ordre.csv").slice(0, 120), content: String(body.csv), contentType: "text/csv; charset=utf-8" });
   let bytes = 0;
-  for (const f of (Array.isArray(body.files) ? body.files : []).slice(0, 5)) {
+  for (const f of (Array.isArray(body.files) ? body.files : []).slice(0, 40)) {
     const b64 = String(f && f.base64 || "");
     if (!b64 || !/^[A-Za-z0-9+/=\s]+$/.test(b64)) continue;
     bytes += b64.length * 0.75;
-    if (bytes > 5_000_000) return json({ error: "attachments_too_large" }, 400);
-    attachments.push({ filename: String(f.name || "vedlegg").slice(0, 120), content: b64, encoding: "base64", contentType: String(f.type || "application/octet-stream").slice(0, 120) });
+    if (bytes > 18_000_000) return json({ error: "attachments_too_large" }, 400);
+    const cid = f.cid && /^[\w.-]{1,80}$/.test(String(f.cid)) ? String(f.cid) : undefined;
+    attachments.push({ filename: String(f.name || "vedlegg").slice(0, 120), content: b64, encoding: "base64", contentType: String(f.type || "application/octet-stream").slice(0, 120), cid });
   }
 
   const gmailUser = Deno.env.get("GMAIL_USER");
