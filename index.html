@@ -223,7 +223,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-12.12";
+  const APP_VERSION = "2026-10-13.1";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -1249,13 +1249,14 @@ details summary { cursor: pointer; padding: 4px 0; }
   }
 
   const jobOrders = (id) => (S.jobs[id] && S.jobs[id].orders) || [];
-  // Every order with the job it belongs to ("" for general orders not tied to a job).
-  function allOrders() {
+  // Orders with the job they belong to ("" for general orders not tied to a job). By default only jobs that are mine
+  // (created by me or assigned to me): the administrator also holds colleagues' jobs but should not see their orders here.
+  function allOrders(everyone) {
     const out = S.orders.map((o) => ({ o, jobId: "" }));
-    for (const j of Object.values(S.jobs)) if (j && j.type === "job") for (const o of j.orders || []) out.push({ o, jobId: j.id });
+    for (const j of Object.values(S.jobs)) if (j && j.type === "job" && (everyone || ownerOf(j) === myId())) for (const o of j.orders || []) out.push({ o, jobId: j.id });
     return out;
   }
-  const findOrder = (id) => allOrders().find((x) => x.o.id === id);
+  const findOrder = (id) => allOrders(true).find((x) => x.o.id === id);
   const orderDoc = (jobId) => (jobId ? jobId : "orders");
   // Order form and list. With a job id the panel shows only that job's orders; without, it is the overview across all jobs.
   function ordersPanel(jobId) {
@@ -1586,7 +1587,7 @@ details summary { cursor: pointer; padding: 4px 0; }
         const jid = b.dataset.job || "";
         let n = 0;
         const sweep = (list) => list.filter((x) => (x.status === "mottatt" ? (n++, false) : true));
-        const jobs = jid ? [S.jobs[jid]] : Object.values(S.jobs);
+        const jobs = jid ? [S.jobs[jid]] : Object.values(S.jobs).filter((x) => x && ownerOf(x) === myId());
         for (const job of jobs) if (job && (job.orders || []).some((x) => x.status === "mottatt")) { job.orders = sweep(job.orders); touch(job.id); }
         if (!jid && S.orders.some((x) => x.status === "mottatt")) { S.orders = sweep(S.orders); touch("orders"); }
         toast(n + " fjernet"); S.keepScroll = true; render(); break;
