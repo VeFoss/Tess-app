@@ -232,7 +232,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-15.1";
+  const APP_VERSION = "2026-10-15.2";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -363,12 +363,12 @@ details summary { cursor: pointer; padding: 4px 0; }
         { k: "hylse", l: "Hylse", w: 2, ph: "65125-06", cat: true },
         { k: "bar", l: "Trykk (bar)", w: 2, num: true },
         { k: "note", l: "Merknad", w: 4 },
-        { k: "a1", l: "Add A", w: 1, cat: true, group: "add", end: 1 },
-        { k: "b1", l: "Add B", w: 1, cat: true, group: "add", end: 1 },
-        { k: "c1", l: "Add C", w: 1, cat: true, group: "add", end: 1 },
-        { k: "a2", l: "Add A", w: 1, cat: true, group: "add", end: 2 },
-        { k: "b2", l: "Add B", w: 1, cat: true, group: "add", end: 2 },
-        { k: "c2", l: "Add C", w: 1, cat: true, group: "add", end: 2 }
+        { k: "a1", l: "Add A", w: 1, cat: true, group: "add", lsrc: ["a1", "b1", "c1", "a2", "b2", "c2"], end: 1 },
+        { k: "b1", l: "Add B", w: 1, cat: true, group: "add", lsrc: ["a1", "b1", "c1", "a2", "b2", "c2"], end: 1 },
+        { k: "c1", l: "Add C", w: 1, cat: true, group: "add", lsrc: ["a1", "b1", "c1", "a2", "b2", "c2"], end: 1 },
+        { k: "a2", l: "Add A", w: 1, cat: true, group: "add", lsrc: ["a1", "b1", "c1", "a2", "b2", "c2"], end: 2 },
+        { k: "b2", l: "Add B", w: 1, cat: true, group: "add", lsrc: ["a1", "b1", "c1", "a2", "b2", "c2"], end: 2 },
+        { k: "c2", l: "Add C", w: 1, cat: true, group: "add", lsrc: ["a1", "b1", "c1", "a2", "b2", "c2"], end: 2 }
       ],
       keep: ["utstyr", "sted", "type", "hylse", "bar"]
     },
