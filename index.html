@@ -232,7 +232,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-15.2";
+  const APP_VERSION = "2026-10-15.3";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -304,7 +304,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   function loadKat() {
     if (KAT.state !== "idle") return;
     KAT.state = "loading";
-    fetch("varekatalog.json").then((r) => (r.ok ? r.json() : [])).then((d) => {
+    fetch("varekatalog.json?v=" + APP_VERSION).then((r) => (r.ok ? r.json() : [])).then((d) => {
       if (Array.isArray(d)) { KAT.list = d; for (const v of d) KAT.byNr[String(v.nr).toUpperCase()] = v.navn; }
       KAT.state = "ready";
     }).catch(() => { KAT.state = "failed"; });
