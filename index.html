@@ -232,7 +232,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-13.3";
+  const APP_VERSION = "2026-10-15.1";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -1223,6 +1223,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     else if (S.view === "login" || S.view === "newpass") app.innerHTML = loginView(S.view === "newpass");
     else if (S.view === "job" && S.jobs[S.jobId]) app.innerHTML = jobView(S.jobs[S.jobId]);
     else if (S.view === "settings") app.innerHTML = settingsView();
+    else if (S.view === "team") app.innerHTML = teamView();
     else { S.view = "list"; app.innerHTML = S.home === "orders" ? ordersView() : listView(); }
     setSave(S.saveState);
     hydratePhotos();
@@ -1248,15 +1249,37 @@ details summary { cursor: pointer; padding: 4px 0; }
     return `<div class="seg" role="group">${opts.map(([k, l]) => `<button data-a="${name}" data-v="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>`;
   }
 
-  function listView() {
-    const all = Object.values(S.jobs).filter((j) => j && j.type === "job");
+  // The front page shows my jobs (created by me or assigned to me). The administrator finds colleagues' jobs under
+  // Innstillinger -> Kollegaers jobber (view "team").
+  const myJobs = () => Object.values(S.jobs).filter((j) => j && j.type === "job" && ownerOf(j) === myId());
+  const teamJobs = () => Object.values(S.jobs).filter((j) => j && j.type === "job" && ownerOf(j) !== myId());
+  function filterJobs(all, team) {
     const q = S.q.trim().toLowerCase();
-    const list = all
+    return all
       .filter((j) => S.filter === "alle" || (S.filter === "aktive" ? j.status !== "sendt" : j.status === "sendt"))
       .filter((j) => S.tfilter === "alle" || (j.jtype || "felt") === S.tfilter)
-      .filter((j) => !S.isAdmin || S.ufilter === "alle" || ownerOf(j) === (S.ufilter === "meg" ? myId() : S.ufilter))
-      .filter((j) => !q || [j.kunde, j.sted, j.ref, j.po, j.beskrivelse, S.isAdmin ? personName(ownerOf(j)) : ""].join(" ").toLowerCase().includes(q))
+      .filter((j) => !team || S.ufilter === "alle" || ownerOf(j) === S.ufilter)
+      .filter((j) => !q || [j.kunde, j.sted, j.ref, j.po, j.beskrivelse, team ? personName(ownerOf(j)) : ""].join(" ").toLowerCase().includes(q))
       .sort((a, b) => (b.updated || 0) - (a.updated || 0));
+  }
+  function teamView() {
+    const all = teamJobs(), list = filterJobs(all, true);
+    const colleagues = people().filter((p) => p.user_id !== myId());
+    if (S.ufilter !== "alle" && !colleagues.some((p) => p.user_id === S.ufilter)) S.ufilter = "alle";
+    const body = !all.length ? `<div class="empty"><p>Kollegaene har ingen jobber ennå.</p></div>`
+      : !list.length ? `<div class="empty"><p>Ingen jobber her.</p></div>`
+      : `<div class="joblist">${list.map(jobCard).join("")}</div>`;
+    return header("Kollegaers jobber", all.filter((j) => j.status !== "sendt").length + " aktive", `<button class="iconbtn" data-a="settings">‹ Innstillinger</button>`) +
+      `<main>
+      ${colleagues.length ? `<div class="fld"><span class="label">Tekniker</span>${chips("ufilter", S.ufilter, [["alle", "Alle"]].concat(colleagues.map((p) => [p.user_id, p.name || p.email])))}</div>` : ""}
+      ${chips("tfilter", S.tfilter, [["alle", "Alle"], ["felt", "Felt"], ["butikk", "Butikk"], ["verksted", "Verksted"]])}
+      <div class="toolbar"><input id="q" class="search" type="search" placeholder="Søk kunde, sted, tekniker …" value="${esc(S.q)}" aria-label="Søk i kollegaers jobber"></div>
+      ${chips("filter", S.filter, [["aktive", "Pågår / ferdig"], ["sendt", "Sendt"], ["alle", "Alle"]])}
+      ${body}</main>`;
+  }
+  function listView() {
+    const all = myJobs();
+    const list = filterJobs(all, false);
     const nActive = all.filter((j) => j.status !== "sendt").length;
     let body;
     if (S.mode === "loading" && !all.length) body = `<div class="empty"><p>Henter jobbene dine …</p></div>`;
@@ -1266,7 +1289,6 @@ details summary { cursor: pointer; padding: 4px 0; }
     return header("", nActive ? nActive + (nActive === 1 ? " aktiv jobb" : " aktive jobber") : "Ingen aktiv jobb", "", `<button class="iconbtn" data-a="settings">Innstillinger</button>`) + homeTabs() +
       `<main>${modeBanner()}
       <div class="pagehead"><h2>Jobber</h2><button class="btn primary" data-a="new">+ Ny jobb</button></div>
-      ${S.isAdmin && S.profiles.length > 1 ? `<div class="fld"><span class="label">Tekniker</span>${chips("ufilter", S.ufilter, [["alle", "Alle"], ["meg", "Mine"]].concat(people().filter((p) => p.user_id !== myId()).map((p) => [p.user_id, p.name || p.email])))}</div>` : ""}
       ${chips("tfilter", S.tfilter, [["alle", "Alle"], ["felt", "Felt"], ["butikk", "Butikk"], ["verksted", "Verksted"]])}
       <div class="toolbar"><input id="q" class="search" type="search" placeholder="Søk kunde, sted, ref, PO …" value="${esc(S.q)}" aria-label="Søk i jobber"></div>
       ${chips("filter", S.filter, [["aktive", "Pågår / ferdig"], ["sendt", "Sendt"], ["alle", "Alle"]])}
@@ -1331,7 +1353,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     try {
       const { data, error } = await sb.functions.invoke(SEND_FN, { body: { to: p.email, subject: `Ny jobb: ${job.kunde || "jobb"}${job.beskrivelse ? " – " + job.beskrivelse : ""}`, text, html } });
       if (error || !data || !data.ok) throw error || new Error("send");
-      toast("Jobben er tildelt " + personName(to) + ", og e-post er sendt");
+      toast("Jobben er tildelt " + personName(to) + ", og e-post er sendt. Du finner den under Innstillinger → Kollegaers jobber.");
     } catch (e) {
       toast("Jobben er tildelt " + personName(to) + ", men e-posten kunne ikke sendes");
     }
@@ -1657,6 +1679,8 @@ details summary { cursor: pointer; padding: 4px 0; }
       ${fieldHtml({ k: "tech", l: "Ditt navn (forslag på timer)", w: 4 }, S.settings.tech, "set-")}</div>
       <p class="hint">Brukes som forslag i nye jobber.</p></section>
       ${account}
+      ${S.isAdmin ? `<section class="panel"><span class="label">Kollegaers jobber</span><p class="hint">${(() => { const t = teamJobs(), n = t.filter((j) => j.status !== "sendt").length; return t.length ? `${n} ${n === 1 ? "jobb pågår" : "jobber pågår"} hos kollegaene (${t.length} totalt).` : "Kollegaene har ingen jobber ennå."; })()}</p>
+        <div><button class="btn" data-a="team">Vis kollegaers jobber</button></div></section>` : ""}
       <section class="panel"><span class="label">Varekatalog</span><p class="hint">${kat}</p></section>
       <section class="panel"><span class="label">Lagring</span><p class="hint">${S.mode === "db" ? "Jobbene lagres privat på claude.ai-kontoen din. Bare du ser dem, også om du deler lenken til appen." : S.mode === "cloud" ? "Jobbene lagres på denne enheten og synkes til kontoen din når du er på nett. Uten nett kan du jobbe som vanlig; endringene sendes når du får dekning igjen." : "Jobbene lagres i nettleseren på denne enheten. De synkes ikke til andre enheter, og de forsvinner hvis du sletter nettstedsdata for appen."}</p></section></main>`;
   }
@@ -1741,13 +1765,14 @@ details summary { cursor: pointer; padding: 4px 0; }
       case "syncnow": await syncNow(); S.keepScroll = true; render(); break;
       case "new": S.home = "jobs"; newJob(false); break;
       case "example": newJob(true); break;
-      case "open": if (!S.jobs[b.dataset.id]) break; S.assignOpen = false; S.view = "job"; S.jobId = b.dataset.id; S.tab = b.dataset.tab || "info"; S.edit = null; render(); window.scrollTo(0, 0); break;
-      case "back": S.view = "list"; S.jobId = null; S.edit = null; render(); window.scrollTo(0, 0); break;
+      case "open": if (!S.jobs[b.dataset.id]) break; S.backTo = S.view === "team" ? "team" : "list"; S.assignOpen = false; S.view = "job"; S.jobId = b.dataset.id; S.tab = b.dataset.tab || "info"; S.edit = null; render(); window.scrollTo(0, 0); break;
+      case "back": S.view = S.view === "job" && S.backTo === "team" ? "team" : "list"; S.backTo = ""; S.jobId = null; S.edit = null; render(); window.scrollTo(0, 0); break;
       case "settings": S.view = "settings"; render(); break;
       case "home": S.home = b.dataset.v; render(); window.scrollTo(0, 0); break;
       case "filter": S.filter = b.dataset.v; render(); break;
       case "tfilter": S.tfilter = b.dataset.v; render(); break;
       case "ufilter": S.ufilter = b.dataset.v; render(); break;
+      case "team": S.view = "team"; S.ufilter = "alle"; S.q = ""; render(); window.scrollTo(0, 0); break;
       case "assignopen": S.assignOpen = true; S.keepScroll = true; render(); break;
       case "assigncancel": S.assignOpen = false; S.keepScroll = true; render(); break;
       case "assignto": S.assignOpen = false; assignJob(j, b.dataset.v); S.keepScroll = true; render(); break;
