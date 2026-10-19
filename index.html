@@ -284,7 +284,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-19.3";
+  const APP_VERSION = "2026-10-19.4";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -1499,9 +1499,9 @@ details summary { cursor: pointer; padding: 4px 0; }
     if (!showOrders && S.home === "orders") S.home = "jobs";
     const nb = (attrs, icon, label, cur, c) => `<button class="nb" ${attrs}${cur ? ' aria-current="page"' : ""}>${icon}<span>${label}</span>${c ? `<span class="c">${c}</span>` : ""}</button>`;
     return `<nav class="bnav" aria-label="Hovedmeny"><div class="bnav-in">
-      <div class="side">${nb('data-a="home" data-v="jobs"', ICONS.jobs, "Jobber", S.home === "jobs")}${showOrders ? nb('data-a="home" data-v="orders"', ICONS.orders, "Bestill", S.home === "orders", waiting) : ""}</div>
+      <div class="side">${nb('data-a="home" data-v="jobs"', ICONS.jobs, "Jobber", S.view === "list" && S.home === "jobs")}${showOrders ? nb('data-a="home" data-v="orders"', ICONS.orders, "Bestill", S.view === "list" && S.home === "orders", waiting) : ""}</div>
       <div class="gap"></div>
-      <div class="side">${S.isAdmin ? nb('data-a="team"', ICONS.team, "Kollegaer", false) : ""}${nb('data-a="settings"', ICONS.gear, "Innstillinger", false)}</div>
+      <div class="side">${S.isAdmin ? nb('data-a="team"', ICONS.team, "Kollegaer", S.view === "team") : ""}${nb('data-a="settings"', ICONS.gear, "Innstillinger", S.view === "settings")}</div>
       <button class="fab" data-a="new" aria-label="Ny jobb">${ICONS.plus}</button></div></nav>`;
   }
   function chips(name, cur, opts) {
@@ -1528,13 +1528,13 @@ details summary { cursor: pointer; padding: 4px 0; }
     const body = !all.length ? `<div class="empty"><p>Kollegaene har ingen jobber ennå.</p></div>`
       : !list.length ? `<div class="empty"><p>Ingen jobber her.</p></div>`
       : `<div class="joblist">${list.map(jobCard).join("")}</div>`;
-    return header("Kollegaers jobber", all.filter((j) => j.status !== "sendt").length + " aktive", `<button class="iconbtn" data-a="settings">${ICONS.back}<span>Innstillinger</span></button>`) +
-      `<main>
+    return homeHeader("Kollegaers jobber", false) +
+      `<main class="with-bnav">
       ${colleagues.length ? `<div class="fld"><span class="label">Tekniker</span>${chips("ufilter", S.ufilter, [["alle", "Alle"]].concat(colleagues.map((p) => [p.user_id, p.name || p.email])))}</div>` : ""}
       ${chips("tfilter", S.tfilter, [["alle", "Alle"], ["felt", "Felt"], ["butikk", "Butikk"], ["verksted", "Verksted"]])}
       <div class="toolbar"><input id="q" class="search" type="search" placeholder="Søk kunde, sted, tekniker …" value="${esc(S.q)}" aria-label="Søk i kollegaers jobber"></div>
       ${chips("filter", S.filter, [["aktive", "Pågår / ferdig"], ["sendt", "Sendt"], ["alle", "Alle"]])}
-      ${body}</main>`;
+      ${body}</main>` + bottomNav();
   }
   function listView() {
     const all = myJobs();
@@ -1954,8 +1954,8 @@ details summary { cursor: pointer; padding: 4px 0; }
     const account = sbUser ? `<section class="panel"><span class="label">Konto</span><p class="hint">Logget inn som <strong>${esc(sbUser.email || "")}</strong>. ${pending.size ? pending.size + " endringer venter på å bli synket." : "Alt er synket."}</p>
       <div class="row"><button class="btn" data-a="syncnow">Synk nå</button><button class="btn ghost" data-a="logout">Logg ut</button></div></section>` : "";
     const kat = KAT.state === "ready" ? KAT.list.length.toLocaleString("nb-NO") + " varer i katalogen." : KAT.state === "failed" ? "Fant ikke varekatalogen (varekatalog.json)." : "Henter varekatalogen …";
-    return header("Innstillinger", "Tess Mobilservice", `<button class="iconbtn" data-a="back">${ICONS.back}<span>Tilbake</span></button>`) +
-      `<main><section class="panel"><h2>Standardverdier</h2><div class="form">
+    return homeHeader("Innstillinger", false) +
+      `<main class="with-bnav"><section class="panel"><h2>Standardverdier</h2><div class="form">
       ${fieldHtml({ k: "email", l: "Standard e-post for rapport", w: 4, type: "email", ph: "ordre@firma.no" }, S.settings.email, "set-")}
       ${fieldHtml({ k: "tech", l: "Ditt navn (forslag på timer)", w: 4 }, S.settings.tech, "set-")}</div>
       <p class="hint">Brukes som forslag i nye jobber.</p></section>
@@ -1966,7 +1966,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       ${S.isAdmin ? `<section class="panel"><span class="label">Kollegaers jobber</span><p class="hint">${(() => { const t = teamJobs(), n = t.filter((j) => j.status !== "sendt").length; return t.length ? `${n} ${n === 1 ? "jobb pågår" : "jobber pågår"} hos kollegaene (${t.length} totalt).` : "Kollegaene har ingen jobber ennå."; })()}</p>
         <div><button class="btn" data-a="team">Vis kollegaers jobber</button></div></section>` : ""}
       <section class="panel"><span class="label">Varekatalog</span><p class="hint">${kat}</p></section>
-      <section class="panel"><span class="label">Lagring</span><p class="hint">${S.mode === "db" ? "Jobbene lagres privat på claude.ai-kontoen din. Bare du ser dem, også om du deler lenken til appen." : S.mode === "cloud" ? "Jobbene lagres på denne enheten og synkes til kontoen din når du er på nett. Uten nett kan du jobbe som vanlig; endringene sendes når du får dekning igjen." : "Jobbene lagres i nettleseren på denne enheten. De synkes ikke til andre enheter, og de forsvinner hvis du sletter nettstedsdata for appen."}</p></section></main>`;
+      <section class="panel"><span class="label">Lagring</span><p class="hint">${S.mode === "db" ? "Jobbene lagres privat på claude.ai-kontoen din. Bare du ser dem, også om du deler lenken til appen." : S.mode === "cloud" ? "Jobbene lagres på denne enheten og synkes til kontoen din når du er på nett. Uten nett kan du jobbe som vanlig; endringene sendes når du får dekning igjen." : "Jobbene lagres i nettleseren på denne enheten. De synkes ikke til andre enheter, og de forsvinner hvis du sletter nettstedsdata for appen."}</p></section></main>` + bottomNav();
   }
 
   // ---------- catalogue dropdown ----------
@@ -2052,7 +2052,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       case "open": if (!S.jobs[b.dataset.id]) break; S.backTo = S.view === "team" ? "team" : "list"; S.assignOpen = false; S.view = "job"; S.jobId = b.dataset.id; S.tab = b.dataset.tab || "info"; S.edit = null; render(); window.scrollTo(0, 0); break;
       case "back": S.view = S.view === "job" && S.backTo === "team" ? "team" : "list"; S.backTo = ""; S.jobId = null; S.edit = null; render(); window.scrollTo(0, 0); break;
       case "settings": S.view = "settings"; render(); break;
-      case "home": S.home = b.dataset.v; render(); window.scrollTo(0, 0); break;
+      case "home": S.view = "list"; S.jobId = null; S.home = b.dataset.v; render(); window.scrollTo(0, 0); break;
       case "filter": S.filter = b.dataset.v; render(); break;
       case "tfilter": S.tfilter = b.dataset.v; render(); break;
       case "ufilter": S.ufilter = b.dataset.v; render(); break;
