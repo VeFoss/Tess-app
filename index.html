@@ -108,6 +108,14 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
 .fld { display: grid; gap: 4px; min-width: 0; position: relative; }
 .fld.w1 { grid-column: span 1; } .fld.w2 { grid-column: span 2; } .fld.w3 { grid-column: span 3; } .fld.w4 { grid-column: span 4; }
 .fld label { font: 600 13px var(--f-body); color: var(--muted); }
+.fhead { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; }
+.fhead span { font: 700 13px var(--f-body); text-transform: uppercase; letter-spacing: .06em; color: var(--brand); }
+.fhead small { color: var(--muted); font-size: 12px; }
+.verdict { font: 700 12px var(--f-body); border-radius: 6px; padding: 2px 7px; white-space: nowrap; }
+.verdict.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.verdict.fail { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
+.verdict.none { color: var(--muted); background: var(--sunk); }
+.bad { color: var(--danger); font-weight: 600; }
 .fld input, .fld select, .fld textarea { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--sunk); border-radius: 8px; padding: 10px 10px; min-height: 44px; }
 .fld textarea { min-height: 110px; resize: vertical; }
 .fld input:focus, .fld select:focus, .fld textarea:focus { background: var(--surface); border-color: var(--steel); }
@@ -232,7 +240,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-15.4";
+  const APP_VERSION = "2026-10-19.1";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -393,6 +401,30 @@ details summary { cursor: pointer; padding: 4px 0; }
         { k: "desc", l: "Hva ble gjort", w: 2, cls: "wide-m" }
       ],
       keep: ["date", "tech"]
+    },
+    tests: {
+      title: "Testede apparater", add: "Legg til testet apparat",
+      fields: [
+        { k: "kind", l: "Type", w: 2, opts: ["Strømkilde", "Trådmater", "Kjøler", "Annet"] },
+        { k: "date", l: "Dato", w: 2, type: "date", def: today },
+        { k: "maker", l: "Produsent", w: 2, ph: "Kemppi, ESAB …", list: true },
+        { k: "model", l: "Modell", w: 2, list: true, req: true },
+        { k: "sn", l: "Serienr. (S/N)", w: 2, req: true },
+        { k: "pclass", l: "Beskyttelsesklasse", w: 2, list: true, ph: "F.eks. IP23S" },
+        { k: "equip", l: "Testutstyr", w: 4, list: true, ph: "Instrument brukt til testen" },
+        { head: "Målte verdier", hint: "Tomt felt eller N/A = ikke aktuelt. Isolasjon over måleområdet kan skrives som >200." },
+        { k: "visual", l: "1. Visuell kontroll", w: 2, opts: ["Godkjent", "Ikke godkjent", "N/A"] },
+        { k: "u1", l: "2. Nettspenning U1 (V RMS)", w: 2, dec: true },
+        { k: "rpe", l: "3. Jordleder RPE (Ω) · maks 0,3", w: 4, dec: true },
+        { k: "rip", l: "4. Isolasjon inngang–chassis (MΩ) · min 2,5", w: 4, dec: true },
+        { k: "rwp", l: "Isolasjon sveisekrets–chassis (MΩ) · min 2,5", w: 4, dec: true },
+        { k: "riw", l: "Isolasjon inngang–sveisekrets (MΩ) · min 5", w: 4, dec: true },
+        { k: "u0", l: "5. Tomgangsspenning (V peak) · maks 113", w: 4, dec: true },
+        { k: "u0vrd", l: "Tomgang med VRD aktivert (V peak) · maks 35", w: 4, dec: true },
+        { k: "note", l: "Utført arbeid / kommentarer", w: 4, area: true },
+        { k: "inspector", l: "Kontrollør (navn eller ID)", w: 4, def: () => S.settings.tech || "" }
+      ],
+      keep: ["kind", "date", "maker", "pclass", "equip", "inspector"]
     }
   };
   const ORDER_FIELDS = [
@@ -416,7 +448,8 @@ details summary { cursor: pointer; padding: 4px 0; }
     send: ico('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>'),
     orders: ico('<circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/><path d="M2.5 3.5h3l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L21 8H6.3"/>')
   };
-  const TABS = [["info", "Jobb"], ["hoses", "Slanger"], ["items", "Varer"], ["hours", "Timer"], ["orders", "Bestill"], ["notes", "Notater"], ["send", "Rapport"]];
+  ICONS.tests = ico('<path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z"/><path d="M13 7l-3 5h4l-3 5"/>');
+  const TABS = [["info", "Jobb"], ["hoses", "Slanger"], ["tests", "Sikkerhetstest"], ["items", "Varer"], ["hours", "Timer"], ["orders", "Bestill"], ["notes", "Notater"], ["send", "Rapport"]];
   const STATUS = { aktiv: "Pågår", ferdig: "Ferdig", sendt: "Sendt" };
 
   // ---------- state ----------
@@ -464,7 +497,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Two people (or two devices) can change the same job before it syncs. Instead of the last save winning the whole
   // job, the server version is merged with mine: rows by their id, other fields one by one, against the last version
   // both sides agreed on (S.base). What I changed since then wins; everything else comes from the server.
-  const ROW_LISTS = ["hoses", "items", "hours", "orders", "photos"];
+  const ROW_LISTS = ["hoses", "items", "hours", "orders", "photos", "tests"];
   const newRid = () => "r" + uid8();
   function hashStr(str) { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
   // Rows from before ids existed get one computed from content and position, so every device arrives at the same id.
@@ -952,6 +985,16 @@ details summary { cursor: pointer; padding: 4px 0; }
       hr(); line("MÅ BESTILLES:");
       for (const o of ord) line(`  ${qtyStr(o.antall)} ${o.enhet || "stk"}  ${o.navn}${o.lev ? "  (" + o.lev + ")" : ""}${o.merk ? "  – " + o.merk : ""}  [${ORDER_STATUS[o.status] || "Venter"}]`);
     }
+    if ((job.tests || []).length) {
+      hr(); line("SIKKERHETSTEST (IEC 60974-4):");
+      for (const r of job.tests) {
+        const res = testResult(r);
+        line(`  ${testTitle(r)}, S/N ${r.sn || "-"}: ${res === "ok" ? "GODKJENT" : res === "fail" ? "IKKE GODKJENT" : "ikke vurdert"}`);
+        const bad = Object.keys(TEST_LIMITS).filter((k) => testCheck(k, r[k]) === "fail").map((k) => TEST_NAMES[k] + " " + testValue(k, r[k]));
+        if (r.visual === "Ikke godkjent") bad.unshift("visuell kontroll");
+        if (bad.length) line("    Avvik: " + bad.join(", "));
+      }
+    }
     if (job.notes) { hr(); line("NOTATER / AVVIK"); line(job.notes); }
     if (photoCount) { hr(); line(`BILDER: ${photoCount} vedlagt`); }
     return L.join("\n");
@@ -990,7 +1033,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     }
 
     // Summary tiles
-    const tiles = [[hs.tot ? fmtMin(hs.tot) : "–", "Timer"], [String(s.count || 0), "Slanger"], [String((job.items || []).length), "Varelinjer"], [String(ord.length), "Til bestilling"]];
+    const tiles = [[hs.tot ? fmtMin(hs.tot) : "–", "Timer"], (job.tests || []).length && !s.count ? [String(job.tests.length), "Testede apparater"] : [String(s.count || 0), "Slanger"], [String((job.items || []).length), "Varelinjer"], [String(ord.length), "Til bestilling"]];
     out.push(`<tr><td style="padding:16px 24px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${tiles.map(([v, k]) => `<td width="25%" style="padding:0 4px"><div style="background:${SOFT};border-radius:8px;padding:10px 12px"><div style="${F}font-size:20px;font-weight:700;color:${INK}">${e(v)}</div><div style="${F}font-size:12px;color:${MUT}">${k}</div></div></td>`).join("")}</tr></table></td></tr>`);
 
     // Hours
@@ -1033,6 +1076,16 @@ details summary { cursor: pointer; padding: 4px 0; }
       out.push(section("Må bestilles", table(th("Vare") + th("Antall", R) + th("Leverandør") + th("Status"), rows)));
     }
 
+    // Safety tests of welding equipment (the full report per machine is attached as PDF)
+    if ((job.tests || []).length) {
+      const rows = job.tests.map((r) => {
+        const res = testResult(r);
+        const bad = Object.keys(TEST_LIMITS).filter((k) => testCheck(k, r[k]) === "fail").map((k) => TEST_NAMES[k] + " " + testValue(k, r[k]));
+        if (r.visual === "Ikke godkjent") bad.unshift("Visuell kontroll");
+        return `<tr>${td(`<b>${e(testTitle(r))}</b>${small(e([r.kind, fmtDate(r.date)].filter(Boolean).join(" · ")))}`)}${td(e(r.sn || "–"), "white-space:nowrap;")}${td(res === "ok" ? badge("Godkjent", G, "#e2f1e2") : res === "fail" ? badge("Ikke godkjent", "#b3261e", "#fbe4e2") : badge("Ikke vurdert", MUT, SOFT))}${td(e(bad.join(", ")))}</tr>`;
+      }).join("");
+      out.push(section("Sikkerhetstest (IEC 60974-4)", table(th("Apparat") + th("S/N") + th("Resultat") + th("Avvik"), rows)));
+    }
     // Photos (inline, attached with a content id)
     if (shots && shots.length) out.push(section("Bilder", `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${shots.map((p, i) => `${i && i % 2 === 0 ? "</tr><tr>" : ""}<td width="50%" style="padding:4px;vertical-align:top"><img src="cid:${e(p.cid)}" width="300" style="width:100%;max-width:300px;height:auto;border-radius:6px;display:block" alt="${e(p.caption)}"><div style="${F}font-size:12px;color:${MUT};margin-top:4px">${e(p.caption)}</div></td>`).join("")}</tr></table>`));
     // Notes
@@ -1064,6 +1117,136 @@ details summary { cursor: pointer; padding: 4px 0; }
       s.src = src; s.onload = resolve; s.onerror = () => reject(new Error("load " + src));
       document.head.appendChild(s);
     });
+  }
+  const blobB64 = (blob) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.onerror = rej; r.readAsDataURL(blob); });
+
+  // ---------- safety test of welding equipment (periodic inspection, IEC 60974-4) ----------
+  // One row per tested machine in job.tests. The PDF follows the layout of the paper form, in English.
+  const TEST_COMPANY = "TESS AS";
+  const TEST_KINDS = { "Strømkilde": "Power source", "Trådmater": "Wire feeder", "Kjøler": "Cooler", "Annet": "Other" };
+  const TEST_VIS = { "Godkjent": "Passed", "Ikke godkjent": "Failed", "N/A": "N/A" };
+  const TEST_LIMITS = { u1: {}, rpe: { max: 0.3 }, rip: { min: 2.5 }, rwp: { min: 2.5 }, riw: { min: 5 }, u0: { max: 113 }, u0vrd: { max: 35 } };
+  const TEST_NAMES = { u1: "U1", rpe: "RPE", rip: "RI-P", rwp: "RW-P", riw: "RI-W", u0: "U0", u0vrd: "U0 VRD" };
+  const TEST_UNITS = { u1: "V", rpe: "Ω", rip: "MΩ", rwp: "MΩ", riw: "MΩ", u0: "V", u0vrd: "V" };
+  // "ok", "fail", "na" (empty or N/A) or "" (a value without a limit). Takes 0,05 / >200 / N/A / OK.
+  function testCheck(k, raw) {
+    const v = String(raw == null ? "" : raw).trim();
+    if (k === "visual") return v === "Godkjent" ? "ok" : v === "Ikke godkjent" ? "fail" : "na";
+    if (!v || /^(n\/?a|-|–)$/i.test(v)) return "na";
+    const m = v.replace(",", ".").match(/([<>]?)\s*=?\s*(\d+(?:\.\d+)?)/);
+    if (!m) return /^(ok|godkjent|passed|approved)$/i.test(v) ? "ok" : /^(feil|failed|ikke godkjent)$/i.test(v) ? "fail" : "";
+    const lim = TEST_LIMITS[k] || {}, n = parseFloat(m[2]);
+    if (lim.max != null) return m[1] !== ">" && n <= lim.max ? "ok" : "fail";
+    if (lim.min != null) return m[1] !== "<" && n >= lim.min ? "ok" : "fail";
+    return "";
+  }
+  function testResult(r) {
+    const c = ["visual"].concat(Object.keys(TEST_LIMITS)).map((k) => testCheck(k, r[k]));
+    return c.includes("fail") ? "fail" : c.includes("ok") ? "ok" : "";
+  }
+  const testValue = (k, raw) => { const v = String(raw || "").trim(); return !v || /^(n\/?a)$/i.test(v) ? "N/A" : /^[<>]?\s*\d+([.,]\d+)?$/.test(v) ? v + " " + TEST_UNITS[k] : v; };
+  const testTitle = (r) => [r.maker, r.model].filter(Boolean).join(" ") || r.kind || "Apparat";
+  const testFileName = (r) => ("sikkerhetstest-" + [r.maker, r.model, r.sn].filter(Boolean).join("-")).replace(/[^\wæøåÆØÅ.-]+/g, "_").slice(0, 80) + ".pdf";
+  let testLogo = null;
+  async function testLogoImg() {
+    if (testLogo !== null) return testLogo;
+    testLogo = "";
+    try {
+      const img = new Image();
+      await new Promise((ok, bad) => { img.onload = ok; img.onerror = bad; setTimeout(bad, 4000); img.src = BRAND.logo; });
+      const c = document.createElement("canvas"); c.width = 600; c.height = Math.round(600 * img.naturalHeight / img.naturalWidth);
+      const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+      testLogo = { data: c.toDataURL("image/jpeg", 0.9), ratio: c.width / c.height };
+    } catch (e) {}
+    return testLogo;
+  }
+  async function testPdf(job, r) {
+    if (!window.jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+    const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
+    const L = 15, RT = 195, GREEN = [43, 122, 59], GREY = [94, 106, 96], LINE = [212, 218, 210];
+    // Helvetica has no Ω, ≤ or ≥: those are drawn with the built-in Symbol font, which has them at W, 0xA3 and 0xB3.
+    const SYM = { "Ω": "W", "≤": "£", "≥": "³" };
+    const clean = (s) => String(s == null ? "" : s).replace(/[–—]/g, "-").replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+    const runs = (s) => clean(s).split(/([Ω≤≥])/).filter((p) => p !== "");
+    const width = (s, style) => runs(s).reduce((w, p) => { doc.setFont(SYM[p] ? "symbol" : "helvetica", SYM[p] ? "normal" : style); return w + doc.getTextWidth(SYM[p] || p) + (SYM[p] ? 0.4 : 0); }, 0);
+    function T(s, x, y, o) {
+      o = o || {};
+      const style = o.bold ? "bold" : "normal";
+      doc.setFontSize(o.size || 9.5); doc.setTextColor.apply(doc, o.color || [27, 33, 28]);
+      let cx = o.align === "right" ? x - width(s, style) : o.align === "center" ? x - width(s, style) / 2 : x;
+      for (const p of runs(s)) { doc.setFont(SYM[p] ? "symbol" : "helvetica", SYM[p] ? "normal" : style); doc.text(SYM[p] || p, cx, y); cx += doc.getTextWidth(SYM[p] || p) + (SYM[p] ? 0.4 : 0); }
+    }
+    // Quantity symbol with a subscript, e.g. R with PE below.
+    function Q(parts, x, y) {
+      let cx = x;
+      for (const [main, sub] of parts) {
+        doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(27, 33, 28); doc.text(main, cx, y); cx += doc.getTextWidth(main);
+        if (sub) { doc.setFontSize(6.5); doc.text(sub, cx, y + 1); cx += doc.getTextWidth(sub); }
+      }
+    }
+    const hr = (y, c, w) => { doc.setDrawColor.apply(doc, c || LINE); doc.setLineWidth(w || 0.2); doc.line(L, y, RT, y); };
+    const heading = (t, y) => { T(t, L, y, { bold: true, size: 10.5, color: GREEN }); hr(y + 2, GREEN, 0.5); return y + 8; };
+
+    // Header
+    const logo = await testLogoImg();
+    if (logo) doc.addImage(logo.data, "JPEG", L, 12, 14 * logo.ratio, 14);
+    else T(BRAND.name, L, 22, { bold: true, size: 22 });
+    T("Safety test report", RT, 19, { bold: true, size: 17, align: "right" });
+    T("Based on IEC 60974-4", RT, 25, { size: 9.5, color: GREY, align: "right" });
+    let y = heading("WORK DESCRIPTION", 38);
+
+    const kv = [["Customer information", [job.kunde, job.sted].filter(Boolean).join(", ")], ["Type (power source, feeder, cooler, other)", TEST_KINDS[r.kind] || r.kind], ["Model", r.model], ["S/N", r.sn], ["Manufacturer", r.maker], ["Protection class", r.pclass], ["Testing equipment", r.equip]];
+    for (const [k, v] of kv) { T(k, L, y, { color: GREY, size: 9 }); T(v || "", L + 72, y); hr(y + 2.2); y += 7; }
+    T("Work details or comments", L, y, { color: GREY, size: 9 });
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9.5);
+    const note = doc.splitTextToSize(clean(r.note || ""), RT - L - 72).slice(0, 8);
+    note.forEach((ln, i) => T(ln, L + 72, y + i * 4.6));
+    y += Math.max(1, note.length) * 4.6 - 2.4; hr(y + 2.2); y += 11;
+
+    // Measured values
+    y = heading("MEASURED VALUES", y);
+    const C = { sym: 98, unit: 122, lim: 140, res: 186, ok: RT };
+    doc.setFillColor(243, 246, 241); doc.rect(L, y - 4.5, RT - L, 7, "F");
+    T("Test", L + 2, y, { bold: true, size: 8.5, color: GREY }); T("Symbol", C.sym, y, { bold: true, size: 8.5, color: GREY }); T("Unit", C.unit, y, { bold: true, size: 8.5, color: GREY });
+    T("Limit", C.lim, y, { bold: true, size: 8.5, color: GREY }); T("Result / value", C.res, y, { bold: true, size: 8.5, color: GREY, align: "right" }); T("OK", C.ok, y, { bold: true, size: 8.5, color: GREY, align: "right" });
+    y += 8;
+    const mark = (k, raw) => { const c = testCheck(k, raw); return c === "ok" ? ["OK", GREEN] : c === "fail" ? ["FAIL", [179, 38, 30]] : ["", GREY]; };
+    const group = (t) => { T(t, L + 2, y, { bold: true }); hr(y + 2.2); y += 7; };
+    const row = (label, sym, unit, limit, k) => {
+      T(label, L + 6, y); if (sym) Q(sym, C.sym, y); T(unit, C.unit, y, { color: GREY }); T(limit, C.lim, y);
+      const val = k === "visual" ? (TEST_VIS[r.visual] || "N/A") : testValue(k, r[k]).replace(/\s*(M?Ω|V)$/, "");
+      T(val, C.res, y, { bold: true, align: "right" });
+      const [m, col] = mark(k, r[k]); if (m) T(m, C.ok, y, { bold: true, size: 8.5, color: col, align: "right" });
+      hr(y + 2.2); y += 7;
+    };
+    group("1. Visual inspection"); row("Result", null, "", "Passed / Failed", "visual");
+    group("2. Mains supply voltage"); row("Measured value", [["U", "1"]], "[V RMS]", "N/A", "u1");
+    group("3. Protective conductor resistance"); row("Measured value", [["R", "PE"]], "[Ω]", "≤ 0,3 Ω", "rpe");
+    group("4. Insulation resistance (500 VDC)");
+    row("Input - Chassis", [["R", "I-P"]], "[MΩ]", "≥ 2,5 MΩ", "rip");
+    row("Welding circuit - Chassis", [["R", "W-P"]], "[MΩ]", "≥ 2,5 MΩ", "rwp");
+    row("Input - Welding circuit", [["R", "I-W"]], "[MΩ]", "≥ 5 MΩ", "riw");
+    group("5. No-load voltage");
+    row("Standard", [["U", "0"], [" / U", "r"]], "[VDC]", "≤ 113 Vpeak", "u0");
+    row("VRD activated", [["U", "0"], [" / U", "r"]], "[VDC]", "≤ 35 Vpeak", "u0vrd");
+    doc.setFont("helvetica", "normal"); doc.setFontSize(7.5);
+    const fine = doc.splitTextToSize("N/A: Not applicable. Mark N/A if test or value is not applicable. Measured values can be numerical or approved. If insulation resistance measurement cannot be carried out, it may be replaced by primary and welding circuit leakage current measurements according to EN 60974-4.", RT - L);
+    fine.forEach((ln, i) => T(ln, L, y + i * 3.4, { size: 7.5, color: GREY }));
+    y += fine.length * 3.4 + 8;
+
+    // Result
+    y = heading("TEST RESULT", y);
+    const res = testResult(r), passed = res === "ok";
+    doc.setFillColor.apply(doc, res ? (passed ? [226, 241, 226] : [251, 228, 226]) : [243, 246, 241]);
+    doc.roundedRect(L, y - 5, RT - L, 12, 2, 2, "F");
+    T("Test result", L + 4, y + 2.5, { color: GREY });
+    T(res ? (passed ? "PASSED" : "FAILED") : "NOT ASSESSED", RT - 4, y + 2.8, { bold: true, size: 14, align: "right", color: res ? (passed ? GREEN : [179, 38, 30]) : GREY });
+    y += 16;
+    for (const [k, v] of [["Inspector's name or ID", r.inspector || job.utfort || S.settings.tech || ""], ["Company", TEST_COMPANY], ["Date", fmtDate(r.date || job.dato)]]) { T(k, L, y, { color: GREY, size: 9 }); T(v, L + 72, y); hr(y + 2.2); y += 7; }
+    y += 6; T("Signature", L, y, { color: GREY, size: 9 }); doc.setDrawColor(27, 33, 28); doc.setLineWidth(0.2); doc.line(L + 72, y + 1, L + 150, y + 1);
+
+    T(`${TEST_COMPANY} · Generated with Tess Mobilservice ${new Date().toLocaleDateString("nb-NO")}`, L, 287, { size: 7.5, color: GREY });
+    return doc.output("blob");
   }
   // Hose type order: by the dimension after the last dash (numeric), then the part before it. 5532-10, 547-12, 5256-16, 5256-24.
   function typeCompare(a, b) {
@@ -1392,8 +1575,11 @@ details summary { cursor: pointer; padding: 4px 0; }
   }
 
   function jobView(j) {
-    const counts = { hoses: (j.hoses || []).length, items: (j.items || []).length, hours: hourSums(j).tot ? fmtMin(hourSums(j).tot) : 0, orders: jobOrders(j.id).filter((o) => o.status !== "mottatt").length, notes: (j.photos || []).length };
-    const tabs = `<nav class="tabs"><div class="tabs-in" role="tablist">${TABS.map(([k, l]) => `<button class="tab" role="tab" data-a="tab" data-v="${k}" aria-selected="${S.tab === k}">${ICONS[k]}<span>${l}</span>${counts[k] ? `<span class="c">${counts[k]}</span>` : ""}</button>`).join("")}</div></nav>`;
+    const counts = { hoses: (j.hoses || []).length, items: (j.items || []).length, hours: hourSums(j).tot ? fmtMin(hourSums(j).tot) : 0, orders: jobOrders(j.id).filter((o) => o.status !== "mottatt").length, notes: (j.photos || []).length, tests: (j.tests || []).length };
+    // The safety test tab is for those who test welding equipment: shown when turned on in Innstillinger, or when the job already has tests.
+    const shown = TABS.filter(([k]) => k !== "tests" || S.settings.tests || counts.tests);
+    if (!shown.some(([k]) => k === S.tab)) S.tab = "info";
+    const tabs = `<nav class="tabs"><div class="tabs-in" role="tablist">${shown.map(([k, l]) => `<button class="tab" role="tab" data-a="tab" data-v="${k}" aria-selected="${S.tab === k}">${ICONS[k]}<span>${l}</span>${counts[k] ? `<span class="c">${counts[k]}</span>` : ""}</button>`).join("")}</div></nav>`;
     let content;
     if (S.tab === "info") content = infoTab(j);
     else if (S.tab === "notes") content = notesTab(j);
@@ -1407,8 +1593,9 @@ details summary { cursor: pointer; padding: 4px 0; }
     const id = prefix + f.k;
     const v = val != null ? val : "";
     let ctl;
+    if (f.head) return `<div class="fld w4 fhead"><span>${esc(f.head)}</span>${f.hint ? `<small>${esc(f.hint)}</small>` : ""}</div>`;
     if (f.opts) ctl = `<select id="${id}" name="${f.k}" ${f.bind ? `data-f="${f.k}"` : ""}>${f.opts.map((o) => `<option${o === v ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
-    else if (f.area) ctl = `<textarea id="${id}" name="${f.k}" data-f="${f.k}" placeholder="${esc(f.ph || "")}">${esc(v)}</textarea>`;
+    else if (f.area) ctl = `<textarea id="${id}" name="${f.k}" ${f.mod ? "" : `data-f="${f.k}"`} placeholder="${esc(f.ph || "")}">${esc(v)}</textarea>`;
     else ctl = `<input id="${id}" name="${f.k}" ${f.num ? 'inputmode="decimal"' : ""} type="${f.type || "text"}" value="${esc(v)}" placeholder="${esc(f.ph || "")}" ${f.list ? `list="${id}-dl"` : ""} ${f.list || f.cat ? 'autocomplete="off"' : ""} ${f.cat ? `data-cat="${esc((f.lsrc || [f.k]).join(","))}" data-mod="${esc(f.mod || "")}"` : ""} ${f.bind ? `data-f="${f.k}"` : ""}>` +
       (f.list ? `<datalist id="${id}-dl">${suggestions(f.mod, f.lsrc || [f.k]).slice(0, 60).map((s) => `<option value="${esc(s)}"></option>`).join("")}</datalist>` : "");
     return `<div class="fld w${f.w} ${f.cls || ""}"><label for="${id}">${esc(f.l)}${f.req ? " *" : ""}</label>${ctl}</div>`;
@@ -1602,6 +1789,15 @@ details summary { cursor: pointer; padding: 4px 0; }
       main = `<strong>${esc(r.type)}</strong>${katName(r.type) ? ` <span class="d">${esc(katName(r.type))}</span>` : ""} · <span class="num">${nf(r.len, 0)} mm</span>${num(r.qty) > 1 ? ` <span class="num">×${esc(r.qty)}</span>` : ""}
         <div class="d">${esc([[r.utstyr, r.sted].filter(Boolean).join(", "), (r.e1 || r.e2) && (r.e1 || "–") + " / " + (r.e2 || "–"), r.hylse && "Hylse " + r.hylse, addText(r), r.bar && r.bar + " bar", r.note].filter(Boolean).join(" · "))}</div>
         ${(() => { const job = S.jobs[S.jobId], ph = job ? (job.photos || []).filter((p) => p.hose && p.hose === ridOf(r)) : []; return (ph.length ? photoThumbs(job, ph, false) : "") + `<button type="button" class="linkbtn" data-a="addphoto" data-hose="${esc(ridOf(r) || "")}">+ Bilde</button>`; })()}`;
+    } else if (m === "tests") {
+      const res = testResult(r);
+      tag = `<span class="verdict ${res || "none"}">${res === "ok" ? "Godkjent" : res === "fail" ? "Ikke godkjent" : "Ikke vurdert"}</span>`;
+      const vals = [["U1", "u1"], ["RPE", "rpe"], ["RI-P", "rip"], ["RW-P", "rwp"], ["RI-W", "riw"], ["U0", "u0"], ["VRD", "u0vrd"]].filter(([, k]) => testCheck(k, r[k]) !== "na")
+        .map(([l, k]) => `<span class="${testCheck(k, r[k]) === "fail" ? "bad" : ""}">${esc(l)} ${esc(testValue(k, r[k]))}</span>`);
+      if (r.visual === "Ikke godkjent") vals.unshift(`<span class="bad">Visuell: ikke godkjent</span>`);
+      main = `<strong>${esc(testTitle(r))}</strong> <span class="d">S/N ${esc(r.sn || "–")}</span><div class="d">${esc([r.kind, fmtDate(r.date), r.inspector].filter(Boolean).join(" · "))}</div>
+        <div class="d">${vals.join(" · ")}</div>${r.note ? `<div class="d">${esc(r.note)}</div>` : ""}
+        <button type="button" class="linkbtn" data-a="testpdf" data-i="${i}">Last ned PDF</button>`;
     } else if (m === "items") {
       tag = `<span class="num">${qtyStr(r.qty)}</span>`;
       main = `<strong>${esc(itemName(r))}</strong> <span class="d">${esc(r.unit || "stk")}</span><div class="d">${esc([r.nr && r.nr !== itemName(r) ? r.nr : "", r.note].filter(Boolean).join(" · "))}</div>`;
@@ -1639,7 +1835,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     return `<section class="panel"><h2>Send rapport</h2>
       <div class="form">${fieldHtml({ k: "sendTo", l: "Send til e-post", w: 4, bind: true, type: "email", ph: "ordre@firma.no" }, to, "s-")}</div>
       ${sbUser ? `<div class="row"><button class="btn primary" data-a="sendmail" id="sendbtn">Send rapport</button>
-        <label class="row" for="s-csv" style="gap:6px"><input type="checkbox" id="s-csv" checked> Legg ved CSV for ordre</label>${(j.hoses || []).length ? `<label class="row" for="s-xlsx" style="gap:6px"><input type="checkbox" id="s-xlsx" checked> Legg ved produksjonsliste (Excel)</label>` : ""}${(j.photos || []).length ? `<label class="row" for="s-photos" style="gap:6px"><input type="checkbox" id="s-photos" checked> Legg ved bilder (${(j.photos || []).length})</label>` : ""}</div>
+        <label class="row" for="s-csv" style="gap:6px"><input type="checkbox" id="s-csv" checked> Legg ved CSV for ordre</label>${(j.hoses || []).length ? `<label class="row" for="s-xlsx" style="gap:6px"><input type="checkbox" id="s-xlsx" checked> Legg ved produksjonsliste (Excel)</label>` : ""}${(j.tests || []).length ? `<label class="row" for="s-tests" style="gap:6px"><input type="checkbox" id="s-tests" checked> Legg ved sikkerhetstest (PDF, ${(j.tests || []).length})</label>` : ""}${(j.photos || []).length ? `<label class="row" for="s-photos" style="gap:6px"><input type="checkbox" id="s-photos" checked> Legg ved bilder (${(j.photos || []).length})</label>` : ""}</div>
         <p class="hint" id="send-msg" aria-live="polite">Sendes direkte fra appen. Svar på e-posten går til ${esc(sbUser.email || "deg")}.</p>` : ""}
       <div class="row"><a class="btn ${sbUser ? "" : "primary"}" id="mailbtn" href="${esc(href)}"${STANDALONE ? "" : ' target="_blank" rel="noopener"'}>Åpne i e-post</a>
       <button class="btn" data-a="copy">Kopier tekst</button>
@@ -1678,6 +1874,9 @@ details summary { cursor: pointer; padding: 4px 0; }
       ${fieldHtml({ k: "email", l: "Standard e-post for rapport", w: 4, type: "email", ph: "ordre@firma.no" }, S.settings.email, "set-")}
       ${fieldHtml({ k: "tech", l: "Ditt navn (forslag på timer)", w: 4 }, S.settings.tech, "set-")}</div>
       <p class="hint">Brukes som forslag i nye jobber.</p></section>
+      <section class="panel"><h2>Moduler</h2>
+      <label class="row" for="set-tests" style="gap:8px"><input type="checkbox" id="set-tests" name="tests"${S.settings.tests ? " checked" : ""}> Vis fanen «Sikkerhetstest» (sveiseapparater, IEC 60974-4)</label>
+      <p class="hint">Gir en egen fane i hver jobb for å registrere sikkerhetstest av sveiseapparater. Testrapporten sendes som PDF sammen med rapporten.</p></section>
       ${account}
       ${S.isAdmin ? `<section class="panel"><span class="label">Kollegaers jobber</span><p class="hint">${(() => { const t = teamJobs(), n = t.filter((j) => j.status !== "sendt").length; return t.length ? `${n} ${n === 1 ? "jobb pågår" : "jobber pågår"} hos kollegaene (${t.length} totalt).` : "Kollegaene har ingen jobber ennå."; })()}</p>
         <div><button class="btn" data-a="team">Vis kollegaers jobber</button></div></section>` : ""}
@@ -1847,6 +2046,13 @@ details summary { cursor: pointer; padding: 4px 0; }
         catch (err) { const p = $("#preview"); const r = document.createRange(); r.selectNodeContents(p); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Teksten er merket. Kopier med Ctrl+C eller hold inne."); }
         break;
       }
+      case "testpdf": {
+        const r = (j.tests || [])[+b.dataset.i];
+        if (!r) break;
+        try { await saveFile(testFileName(r), await testPdf(j, r), "PDF lagret"); }
+        catch (err) { toast("Kunne ikke lage PDF-en (krever nett første gang)."); }
+        break;
+      }
       case "csv": {
         const name = ("ordre-" + (j.kunde || "jobb") + "-" + (j.dato || today())).replace(/[^\wæøåÆØÅ.-]+/g, "_") + ".csv";
         await saveFile(name, new Blob([csvText(j)], { type: "text/csv;charset=utf-8" }), "CSV lagret");
@@ -1869,6 +2075,11 @@ details summary { cursor: pointer; padding: 4px 0; }
             const blob = await hoseWorkbook(j);
             const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.onerror = rej; r.readAsDataURL(blob); });
             files.push({ name: name.replace(/^ordre-/, "produksjon-").replace(/\.csv$/, ".xlsx"), base64: b64, type: blob.type });
+            say("Sender rapporten …");
+          }
+          if ($("#s-tests") && $("#s-tests").checked) {
+            say("Lager testrapportene …");
+            for (const r of j.tests || []) files.push({ name: testFileName(r), base64: await blobB64(await testPdf(j, r)), type: "application/pdf" });
             say("Sender rapporten …");
           }
           const shots = [];
@@ -1901,7 +2112,7 @@ details summary { cursor: pointer; padding: 4px 0; }
             : /send_failed/.test(m) ? "Gmail avviste sendingen. Sjekk at app-passordet er riktig."
             : /bad_recipient/.test(m) ? "Mottakeradressen ser ikke riktig ut."
             : /attachments_too_large/.test(m) ? "Vedleggene er for store til å sendes."
-            : /load https:/.test(m) ? "Kunne ikke lage produksjonslisten (krever nett første gang). Fjern krysset for Excel og prøv igjen."
+            : /load https:/.test(m) ? "Kunne ikke lage et vedlegg (krever nett første gang). Fjern krysset for Excel eller PDF og prøv igjen."
             : /Failed to send a request|not found|404/i.test(m) ? "Sendefunksjonen finnes ikke i Supabase ennå (send-report)."
             : "Kunne ikke sende: " + m;
           say(nice); btn.disabled = false; btn.textContent = "Send rapport";
@@ -1980,7 +2191,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     const t = e.target;
     if (t.dataset && t.dataset.cat) showAc(t);
     if (t.id === "q") { S.q = t.value; const pos = t.selectionStart; render(); const q = $("#q"); q.focus(); try { q.setSelectionRange(pos, pos); } catch (x) {} return; }
-    if (t.id && t.id.startsWith("set-")) { S.settings[t.name] = t.value; touch("settings"); return; }
+    if (t.id && t.id.startsWith("set-")) { S.settings[t.name] = t.type === "checkbox" ? t.checked : t.value; touch("settings"); return; }
     if (t.id === "hours-from" || t.id === "hours-to" || t.id === "hours-date") {
       const p = $("#hours-prev"); if (p) p.textContent = hoursPreview($("#hours-from").value, $("#hours-to").value, $("#hours-date").value);
       return;
