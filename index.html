@@ -108,6 +108,7 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
 .fld { display: grid; gap: 4px; min-width: 0; position: relative; }
 .fld.w1 { grid-column: span 1; } .fld.w2 { grid-column: span 2; } .fld.w3 { grid-column: span 3; } .fld.w4 { grid-column: span 4; }
 .fld label { font: 600 13px var(--f-body); color: var(--muted); }
+.modlist { display: grid; gap: 10px; margin-top: 8px; }
 .fhead { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; }
 .fhead span { font: 700 13px var(--f-body); text-transform: uppercase; letter-spacing: .06em; color: var(--brand); }
 .fhead small { color: var(--muted); font-size: 12px; }
@@ -240,7 +241,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-19.1";
+  const APP_VERSION = "2026-10-19.2";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -450,6 +451,11 @@ details summary { cursor: pointer; padding: 4px 0; }
   };
   ICONS.tests = ico('<path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z"/><path d="M13 7l-3 5h4l-3 5"/>');
   const TABS = [["info", "Jobb"], ["hoses", "Slanger"], ["tests", "Sikkerhetstest"], ["items", "Varer"], ["hours", "Timer"], ["orders", "Bestill"], ["notes", "Notater"], ["send", "Rapport"]];
+  // Modules each user can turn off in Innstillinger. All are on by default, except the safety test (welding equipment only).
+  // A tab stays visible in a job that already has something registered in it.
+  const MOD_TOGGLES = [["hoses", "Slanger", "oppmåling av slanger og produksjonsliste"], ["tests", "Sikkerhetstest", "sveiseapparater, IEC 60974-4, rapport som PDF"], ["items", "Varer", "materiell brukt på jobben"], ["hours", "Timer", "timeføring med TTM-koder og overtid"], ["orders", "Bestill", "varer som må bestilles"], ["notes", "Notater", "notater, avvik og bilder"]];
+  const modKey = (k) => (k === "tests" ? "tests" : "show_" + k);
+  const modOn = (k) => !MOD_TOGGLES.some(([m]) => m === k) || (k === "tests" ? !!S.settings.tests : S.settings[modKey(k)] !== false);
   const STATUS = { aktiv: "Pågår", ferdig: "Ferdig", sendt: "Sendt" };
 
   // ---------- state ----------
@@ -1425,7 +1431,9 @@ details summary { cursor: pointer; padding: 4px 0; }
   }
   function homeTabs() {
     const waiting = allOrders().filter(({ o }) => o.status !== "mottatt").length;
-    const t = [["jobs", "Jobber", ""], ["orders", "Bestill", waiting ? String(waiting) : ""]];
+    const t = [["jobs", "Jobber", ""]];
+    if (modOn("orders") || waiting) t.push(["orders", "Bestill", waiting ? String(waiting) : ""]);
+    else if (S.home === "orders") S.home = "jobs";
     return `<nav class="tabs"><div class="tabs-in" role="tablist">${t.map(([k, l, c]) => `<button class="tab" role="tab" data-a="home" data-v="${k}" aria-selected="${S.home === k}">${ICONS[k]}<span>${l}</span>${c ? `<span class="c">${c}</span>` : ""}</button>`).join("")}</div></nav>`;
   }
   function chips(name, cur, opts) {
@@ -1577,7 +1585,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   function jobView(j) {
     const counts = { hoses: (j.hoses || []).length, items: (j.items || []).length, hours: hourSums(j).tot ? fmtMin(hourSums(j).tot) : 0, orders: jobOrders(j.id).filter((o) => o.status !== "mottatt").length, notes: (j.photos || []).length, tests: (j.tests || []).length };
     // The safety test tab is for those who test welding equipment: shown when turned on in Innstillinger, or when the job already has tests.
-    const shown = TABS.filter(([k]) => k !== "tests" || S.settings.tests || counts.tests);
+    const shown = TABS.filter(([k]) => modOn(k) || counts[k]);
     if (!shown.some(([k]) => k === S.tab)) S.tab = "info";
     const tabs = `<nav class="tabs"><div class="tabs-in" role="tablist">${shown.map(([k, l]) => `<button class="tab" role="tab" data-a="tab" data-v="${k}" aria-selected="${S.tab === k}">${ICONS[k]}<span>${l}</span>${counts[k] ? `<span class="c">${counts[k]}</span>` : ""}</button>`).join("")}</div></nav>`;
     let content;
@@ -1875,8 +1883,8 @@ details summary { cursor: pointer; padding: 4px 0; }
       ${fieldHtml({ k: "tech", l: "Ditt navn (forslag på timer)", w: 4 }, S.settings.tech, "set-")}</div>
       <p class="hint">Brukes som forslag i nye jobber.</p></section>
       <section class="panel"><h2>Moduler</h2>
-      <label class="row" for="set-tests" style="gap:8px"><input type="checkbox" id="set-tests" name="tests"${S.settings.tests ? " checked" : ""}> Vis fanen «Sikkerhetstest» (sveiseapparater, IEC 60974-4)</label>
-      <p class="hint">Gir en egen fane i hver jobb for å registrere sikkerhetstest av sveiseapparater. Testrapporten sendes som PDF sammen med rapporten.</p></section>
+      <p class="hint">Velg hvilke faner du vil se i jobbene. Jobb og Rapport er alltid med. En fane du har slått av vises likevel i en jobb der noe allerede er registrert, for eksempel en jobb du har fått tildelt.</p>
+      <div class="modlist">${MOD_TOGGLES.map(([k, l, d]) => `<label class="row" for="set-${modKey(k)}" style="gap:8px"><input type="checkbox" id="set-${modKey(k)}" name="${modKey(k)}"${modOn(k) ? " checked" : ""}> <span><b>${esc(l)}</b> <span class="d">· ${esc(d)}</span></span></label>`).join("")}</div></section>
       ${account}
       ${S.isAdmin ? `<section class="panel"><span class="label">Kollegaers jobber</span><p class="hint">${(() => { const t = teamJobs(), n = t.filter((j) => j.status !== "sendt").length; return t.length ? `${n} ${n === 1 ? "jobb pågår" : "jobber pågår"} hos kollegaene (${t.length} totalt).` : "Kollegaene har ingen jobber ennå."; })()}</p>
         <div><button class="btn" data-a="team">Vis kollegaers jobber</button></div></section>` : ""}
