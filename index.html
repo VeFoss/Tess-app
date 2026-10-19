@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#2b7a3b">
+<meta name="theme-color" content="#1f6030">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -13,11 +13,12 @@
 <title>Tess Mobilservice</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100,600;100,700;125,800;125,900&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-/* Layout: one-column field tool in the green workshop profile. Green header with logo, icon tab bar, chevron ground; forms on top, logged rows below as a ledger. */
+/* Layout: one-column field tool. Rounded green header with the TESS logo, summary tiles on the front page, soft white cards,
+   pill tabs in a job, bottom navigation with a round "new job" button; forms on top, logged rows below as a ledger. */
 :root {
-  --bg: #f3f4f0;
+  --bg: #f2f4f0;
   --surface: #ffffff;
   --sunk: #f6f7f4;
   --ink: #1b211c;
@@ -35,24 +36,26 @@
   --warn: #b5650a;
   --warn-bg: #fdf3e2;
   --danger: #b3261e;
-  --chev-op: .075;
-  --f-display: "Archivo", "Arial Black", "Helvetica Neue", Arial, sans-serif;
-  --f-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --chev-op: 0;
+  --f-display: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --f-body: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
-  --r: 10px;
+  --r: 18px;
+  --shadow: 0 3px 12px rgba(20, 40, 25, .07);
+  --shadow-up: 0 6px 16px rgba(31, 96, 48, .32);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0f140f; --surface: #182019; --sunk: #131a14; --ink: #e6ebe5; --muted: #9aa79b; --line: #2b372c;
     --brand: #25693a; --brand-deep: #1a4f2a; --tint: #1c3321; --accent: #3d9a51; --accent-ink: #ffffff;
-    --steel: #86b6d6; --plum: #b9a0e6; --ok: #6cc58a; --warn: #f0a24a; --warn-bg: #2b2213; --danger: #ff7b72; --chev-op: .05;
+    --steel: #86b6d6; --plum: #b9a0e6; --ok: #6cc58a; --warn: #f0a24a; --warn-bg: #2b2213; --danger: #ff7b72; --chev-op: 0; --shadow: none;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0f140f; --surface: #182019; --sunk: #131a14; --ink: #e6ebe5; --muted: #9aa79b; --line: #2b372c;
   --brand: #25693a; --brand-deep: #1a4f2a; --tint: #1c3321; --accent: #3d9a51; --accent-ink: #ffffff;
-  --steel: #86b6d6; --plum: #b9a0e6; --ok: #6cc58a; --warn: #f0a24a; --warn-bg: #2b2213; --danger: #ff7b72; --chev-op: .05;
+  --steel: #86b6d6; --plum: #b9a0e6; --ok: #6cc58a; --warn: #f0a24a; --warn-bg: #2b2213; --danger: #ff7b72; --chev-op: 0; --shadow: none;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -65,32 +68,62 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
 h1, h2, h3 { font-family: var(--f-display); font-weight: 700; margin: 0; text-wrap: balance; }
 
-.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--brand); color: var(--on-brand); }
-.top-in { max-width: 760px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; min-height: 72px; }
-.top h1 { font-size: 22px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.top .sub { font-size: 13px; opacity: .85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top { position: relative; z-index: 5; background: var(--brand-deep); color: var(--on-brand); border-radius: 0 0 24px 24px; padding-top: env(safe-area-inset-top, 0px); }
+.top-in { max-width: 760px; margin: 0 auto; padding: 14px 16px 18px; display: grid; gap: 10px; }
+.top.home .top-in { padding-bottom: 54px; }
+.top.home.flat .top-in { padding-bottom: 20px; }
+.hrow { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.hrow .savestate { margin-left: auto; }
+.top h1 { font: 800 26px/1.15 var(--f-display); overflow-wrap: anywhere; }
+.top.home h1 { font-size: 30px; }
+.top .sub { font-size: 15px; color: color-mix(in srgb, var(--on-brand) 82%, transparent); overflow-wrap: anywhere; }
 .wm { display: grid; line-height: 1; flex: none; }
-.wm-logo { height: 40px; width: auto; filter: brightness(0) invert(1); display: block; }
+.wm-logo { height: 34px; width: auto; filter: brightness(0) invert(1); display: block; }
 .wm-a { font: 900 34px/0.9 var(--f-display); font-stretch: 125%; letter-spacing: -.01em; }
 .wm-b { font: 600 10.5px var(--f-display); font-stretch: 125%; letter-spacing: .02em; margin-top: 4px; }
-.top-right { margin-left: auto; text-align: right; display: grid; gap: 4px; justify-items: end; min-width: 0; }
-.top-right .sub { font-size: 15px; opacity: .9; max-width: 100%; }
-.iconbtn { background: transparent; border: 1px solid color-mix(in srgb, var(--on-brand) 45%, transparent); color: var(--on-brand); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+.iconbtn { background: color-mix(in srgb, var(--on-brand) 16%, transparent); border: 0; color: var(--on-brand); border-radius: 999px; min-height: 44px; padding: 0 16px 0 10px; cursor: pointer; font-weight: 700; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.iconbtn svg { width: 20px; height: 20px; }
+.hpill { padding: 5px 12px; border-radius: 999px; background: color-mix(in srgb, var(--on-brand) 18%, transparent); font-size: 13px; font-weight: 700; white-space: nowrap; }
 .savestate { font-size: 12px; opacity: .8; white-space: nowrap; }
 .savestate.err { color: #ffd88a; opacity: 1; }
 
-.tabs { background: var(--surface); border-bottom: 2px solid var(--line); position: sticky; top: calc(env(safe-area-inset-top, 0px) + 72px); z-index: 4; }
-.tabs-in { max-width: 760px; margin: 0 auto; display: flex; overflow-x: auto; scrollbar-width: none; }
-.tab { flex: 1 0 56px; border: 0; background: none; padding: 10px 2px 8px; cursor: pointer; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -2px; display: grid; justify-items: center; gap: 3px; font-size: 13px; position: relative; }
-.tab svg { width: 22px; height: 22px; }
-.tab[aria-selected="true"] { color: var(--brand); border-bottom-color: var(--brand); font-weight: 700; }
-.tab .c { position: absolute; top: 4px; left: calc(50% + 10px); font: 500 11px/1 var(--f-mono); background: var(--tint); color: var(--brand); border-radius: 999px; padding: 3px 5px; }
+.tabs { position: sticky; top: 0; z-index: 4; background: color-mix(in srgb, var(--bg) 94%, transparent); padding-top: env(safe-area-inset-top, 0px); }
+.tabs-in { max-width: 760px; margin: 0 auto; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 12px 16px 6px; }
+.tab { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 14px; border-radius: 999px; border: 0; background: var(--surface); color: var(--muted); font: 600 14px var(--f-body); cursor: pointer; white-space: nowrap; box-shadow: var(--shadow); }
+.tab svg { width: 18px; height: 18px; }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--bg); font-weight: 700; }
+.tab .c { font: 700 12px/1 var(--f-body); background: var(--tint); color: var(--brand); border-radius: 999px; padding: 3px 6px; }
+.tab[aria-selected="true"] .c { background: color-mix(in srgb, var(--bg) 25%, transparent); color: var(--bg); }
+
+/* Front page: summary tiles over the header, bottom navigation */
+.tiles { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 8px; margin-top: -54px; position: relative; z-index: 6; }
+.tile { background: var(--surface); border: 0; border-radius: 16px; padding: 12px; box-shadow: 0 4px 14px rgba(20, 40, 25, .09); text-align: left; color: var(--ink); min-width: 0; }
+button.tile { cursor: pointer; }
+.tile .v { font: 800 22px/1.2 var(--f-display); font-variant-numeric: tabular-nums; }
+.tile .v.warn { color: var(--warn); }
+.tile .k { font-size: 12px; color: var(--muted); }
+.chiprow { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: -4px -16px 0; padding: 4px 16px 8px; }
+.chiprow .seg { flex-wrap: nowrap; flex: none; }
+.chiprow .seg + .seg { padding-left: 8px; border-left: 1px solid var(--line); }
+.chiprow .seg button { white-space: nowrap; }
+.with-bnav { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 120px); }
+.bnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.bnav-in { max-width: 760px; margin: 0 auto; display: flex; height: 68px; position: relative; }
+.bnav .side { flex: 1; display: flex; justify-content: space-around; }
+.bnav .gap { width: 88px; flex: none; }
+.nb { border: 0; background: none; color: var(--muted); display: grid; justify-items: center; align-content: center; gap: 3px; font: 600 12px var(--f-body); min-width: 64px; cursor: pointer; position: relative; }
+.nb svg { width: 24px; height: 24px; }
+.nb[aria-current="page"] { color: var(--brand); font-weight: 700; }
+.nb .c { position: absolute; top: 7px; left: calc(50% + 6px); background: var(--warn); color: #fff; font: 700 11px/1 var(--f-body); border-radius: 999px; padding: 3px 6px; }
+.fab { position: absolute; left: 50%; top: -26px; transform: translateX(-50%); width: 64px; height: 64px; border-radius: 50%; border: 4px solid var(--bg); background: var(--brand-deep); color: #fff; display: grid; place-items: center; cursor: pointer; box-shadow: var(--shadow-up); }
+.fab svg { width: 28px; height: 28px; }
+.fab:focus-visible, .nb:focus-visible, .tile:focus-visible, .iconbtn:focus-visible { outline: 3px solid var(--steel); outline-offset: 2px; }
 
 main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16px 64px; display: grid; gap: 16px; }
 .banner { background: var(--warn-bg); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); border-radius: var(--r); padding: 10px 14px; font-size: 14px; }
 
-.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; color: var(--ink); }
-.btn.primary { background: var(--accent); border-color: var(--brand-deep); color: var(--accent-ink); }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 10px 16px; cursor: pointer; font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; color: var(--ink); }
+.btn.primary { background: var(--brand-deep); border-color: var(--brand-deep); color: var(--accent-ink); }
 .btn.dark { background: var(--ink); border-color: var(--ink); color: var(--bg); }
 .btn.ghost { background: transparent; }
 .btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); background: transparent; }
@@ -100,8 +133,8 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .grow { flex: 1; min-width: 0; }
 
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 14px; }
-.panel h2 { font-size: 22px; }
+.panel { background: var(--surface); border: 0; border-radius: var(--r); padding: 18px 16px; display: grid; gap: 14px; box-shadow: var(--shadow); }
+.panel h2 { font-size: 20px; font-weight: 800; }
 .label { font: 600 12px var(--f-body); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
 
 .form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 10px; }
@@ -117,7 +150,7 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
 .verdict.fail { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
 .verdict.none { color: var(--muted); background: var(--sunk); }
 .bad { color: var(--danger); font-weight: 600; }
-.fld input, .fld select, .fld textarea { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--sunk); border-radius: 8px; padding: 10px 10px; min-height: 44px; }
+.fld input, .fld select, .fld textarea { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--sunk); border-radius: 12px; padding: 10px 10px; min-height: 44px; }
 .fld textarea { min-height: 110px; resize: vertical; }
 .fld input:focus, .fld select:focus, .fld textarea:focus { background: var(--surface); border-color: var(--steel); }
 @media (max-width: 520px) {
@@ -137,26 +170,29 @@ main { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 16
 
 /* Job list */
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.search { flex: 1 1 200px; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 10px 12px; min-height: 44px; }
+.search { flex: 1 1 200px; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 10px 18px; min-height: 48px; }
 .seg { display: flex; flex-wrap: wrap; gap: 8px; }
-.seg button { border: 1.5px solid var(--line); background: var(--surface); border-radius: 6px; padding: 8px 14px; cursor: pointer; font-weight: 500; color: var(--ink); min-height: 44px; }
-.seg button[aria-pressed="true"] { background: var(--tint); border-color: var(--brand); color: var(--brand); }
+.seg button { border: 1.5px solid transparent; background: var(--surface); border-radius: 999px; padding: 8px 16px; cursor: pointer; font-weight: 600; color: var(--ink); min-height: 44px; box-shadow: var(--shadow); }
+.seg button[aria-pressed="true"] { background: var(--tint); border-color: var(--brand); color: var(--brand); font-weight: 700; }
 .pagehead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.pagehead h2 { font-size: 26px; flex: 1; }
+.pagehead h2 { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); flex: 1; }
+.sect { font: 700 13px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: -8px; }
 .joblist { display: grid; gap: 10px; }
-.jobcard { display: grid; grid-template-columns: 6px 1fr auto; gap: 0 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 14px 14px 0; cursor: pointer; text-align: left; width: 100%; overflow: hidden; }
-.jobcard .stripe { grid-row: 1 / span 3; border-radius: 0 4px 4px 0; background: var(--steel); }
-.jobcard.ferdig .stripe { background: var(--warn); }
-.jobcard.sendt .stripe { background: var(--ok); }
-.jobcard .jt { display: block; font: 700 20px/1.2 var(--f-display); min-width: 0; overflow-wrap: anywhere; }
+.jobcard { display: grid; grid-template-columns: 44px 1fr auto; gap: 0 12px; background: var(--surface); border: 0; border-radius: var(--r); padding: 14px; cursor: pointer; text-align: left; width: 100%; overflow: hidden; box-shadow: var(--shadow); color: var(--ink); align-items: start; }
+.jobcard .av { grid-row: 1 / span 2; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font: 800 15px var(--f-display); background: var(--tint); color: var(--brand); }
+.jobcard.ferdig .av { background: color-mix(in srgb, var(--steel) 14%, transparent); color: var(--steel); }
+.jobcard.sendt .av { background: var(--sunk); color: var(--muted); }
+.jobcard .jt { display: block; font: 700 17px/1.25 var(--f-display); min-width: 0; overflow-wrap: anywhere; }
+.jobcard.hero { padding: 16px; }
+.jobcard.hero .jt { font-size: 20px; font-weight: 800; }
 .jobcard .meta { display: block; color: var(--muted); font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
-.jobcard .stats { grid-column: 2 / span 2; display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 13px; color: var(--muted); align-items: center; }
+.jobcard .stats { grid-column: 1 / span 3; display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 13px; color: var(--muted); align-items: center; }
 .jobcard .stats b { color: var(--ink); font-weight: 500; }
-.pill { font: 600 11px var(--f-body); letter-spacing: .08em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; align-self: start; white-space: nowrap; border: 1px solid currentColor; background: transparent; }
+.pill { font: 700 12px var(--f-body); padding: 4px 10px; border-radius: 999px; align-self: start; white-space: nowrap; border: 0; background: color-mix(in srgb, currentColor 13%, transparent); }
 .pill.aktiv { color: var(--steel); } .pill.ferdig { color: var(--warn); } .pill.sendt { color: var(--ok); }
 .pill.venter { color: var(--warn); } .pill.bestilt { color: var(--steel); } .pill.mottatt { color: var(--ok); }
 button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
-.tb { font: 600 12px var(--f-body); padding: 2px 8px; border-radius: 4px; background: var(--tint); color: var(--brand); }
+.tb { font: 600 12px var(--f-body); padding: 3px 10px; border-radius: 999px; background: var(--tint); color: var(--brand); }
 .tb.butikk { background: color-mix(in srgb, var(--plum) 14%, transparent); color: var(--plum); }
 .assignee { font: 700 20px/1.2 var(--f-display); margin-top: 2px; }
 .tb.person { background: color-mix(in srgb, var(--steel) 14%, transparent); color: var(--steel); }
@@ -171,7 +207,14 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
 .lrow { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: start; }
 .lrow.editing { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .lrow.done { opacity: .5; }
-.lrow .tag { font: 500 13px var(--f-mono); background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; min-width: 2.4em; text-align: center; white-space: nowrap; }
+.lrow .tag { font: 600 13px var(--f-mono); background: var(--sunk); border: 0; border-radius: 999px; padding: 4px 9px; min-width: 2.4em; text-align: center; white-space: nowrap; }
+.lrow.hose .tag { background: var(--tint); color: var(--brand); font: 800 14px var(--f-display); min-width: 32px; height: 32px; padding: 0; display: grid; place-items: center; }
+.lrow .below { grid-column: 1 / -1; min-width: 0; }
+@media (max-width: 520px) { .lrow.hose { grid-template-columns: auto 1fr; } .lrow.hose .below { order: 2; } .lrow.hose .acts { order: 3; grid-column: 1 / -1; justify-content: flex-end; } }
+.hline { display: flex; align-items: center; gap: 6px; margin: 16px 0 6px; }
+.hline .end { flex: none; max-width: 38%; padding: 4px 8px; border-radius: 8px; background: var(--sunk); border: 1px solid var(--line); font: 500 12px var(--f-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hline .bar { flex: 1; min-width: 48px; height: 6px; border-radius: 3px; background: var(--ink); position: relative; display: flex; justify-content: center; }
+.hline .bar span { position: absolute; top: -11px; padding: 2px 9px; border-radius: 10px; background: var(--brand-deep); color: #fff; font: 800 12px var(--f-body); white-space: nowrap; }
 .lrow .main { min-width: 0; overflow-wrap: anywhere; }
 .lrow .main strong { font-weight: 600; }
 .lrow .main .d { color: var(--muted); font-size: 14px; }
@@ -182,8 +225,8 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
 .grp::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
 .totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-.tot { background: var(--sunk); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; }
-.tot .v { font: 500 20px var(--f-mono); }
+.tot { background: var(--sunk); border: 0; border-radius: 14px; padding: 10px 12px; min-width: 0; }
+.tot .v { font: 800 20px var(--f-display); font-variant-numeric: tabular-nums; }
 .tot .k { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
 .sumtable { width: 100%; border-collapse: collapse; font-size: 14px; }
 .sumtable td { padding: 6px 0; border-bottom: 1px dashed var(--line); }
@@ -212,9 +255,9 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
 .lightbox img { max-width: 100%; max-height: calc(100vh - 120px); object-fit: contain; border-radius: 6px; }
 .mailframe { width: 100%; height: 640px; border: 1px solid var(--line); border-radius: 8px; background: #eef1ec; display: block; }
 details summary { cursor: pointer; padding: 4px 0; }
-.toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-weight: 600; z-index: 20; max-width: calc(100% - 32px); }
+.toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 92px); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 600; z-index: 20; max-width: calc(100% - 32px); }
 .ex { font: 600 11px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--warn); }
-@media (prefers-reduced-motion: no-preference) { .jobcard { transition: border-color .15s; } .jobcard:hover { border-color: var(--steel); } }
+@media (prefers-reduced-motion: no-preference) { .jobcard, .tile { transition: transform .12s; } .jobcard:active, .tile:active { transform: scale(.985); } }
 </style>
 <!--HEAD-END-->
 </head>
@@ -241,7 +284,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-19.2";
+  const APP_VERSION = "2026-10-19.3";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -450,6 +493,10 @@ details summary { cursor: pointer; padding: 4px 0; }
     orders: ico('<circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/><path d="M2.5 3.5h3l2.3 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L21 8H6.3"/>')
   };
   ICONS.tests = ico('<path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z"/><path d="M13 7l-3 5h4l-3 5"/>');
+  ICONS.back = ico('<path d="M15 5l-7 7 7 7"/>');
+  ICONS.plus = ico('<path d="M12 5v14M5 12h14"/>');
+  ICONS.gear = ico('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/>');
+  ICONS.team = ico('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.3-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5c2 .6 3.2 2.5 3.6 5.5"/>');
   const TABS = [["info", "Jobb"], ["hoses", "Slanger"], ["tests", "Sikkerhetstest"], ["items", "Varer"], ["hours", "Timer"], ["orders", "Bestill"], ["notes", "Notater"], ["send", "Rapport"]];
   // Modules each user can turn off in Innstillinger. All are on by default, except the safety test (welding equipment only).
   // A tab stays visible in a job that already has something registered in it.
@@ -1426,15 +1473,36 @@ details summary { cursor: pointer; padding: 4px 0; }
     return `<div class="wm">${img}${text}</div>`;
   }
   function header(title, sub, left, right) {
-    if (!left) return `<header class="top"><div class="top-in">${wordmark()}<div class="top-right"><span class="sub">${esc(sub)}</span><span class="row">${right || ""}<span id="savestate" class="savestate"></span></span></div></div></header>`;
-    return `<header class="top"><div class="top-in">${left}<div class="grow"><div class="sub">${esc(sub)}</div><h1>${esc(title)}</h1></div><span id="savestate" class="savestate"></span>${right || ""}</div></header>`;
+    if (!left) return `<header class="top home flat"><div class="top-in"><div class="hrow">${wordmark()}<span id="savestate" class="savestate"></span>${right || ""}</div>${sub ? `<div class="sub">${esc(sub)}</div>` : ""}</div></header>`;
+    return `<header class="top"><div class="top-in"><div class="hrow">${left}<span id="savestate" class="savestate"></span>${right || ""}</div><div><h1>${esc(title)}</h1>${sub ? `<div class="sub">${esc(sub)}</div>` : ""}</div></div></header>`;
   }
-  function homeTabs() {
+  // Front page header: logo, today's date and a headline. With tiles it leaves room for the summary tiles to overlap.
+  function homeHeader(title, withTiles) {
+    const d = new Date().toLocaleDateString("nb-NO", { weekday: "long", day: "numeric", month: "long" });
+    return `<header class="top home${withTiles ? "" : " flat"}"><div class="top-in"><div class="hrow">${wordmark()}<span id="savestate" class="savestate"></span></div><div><div class="sub">${esc(d.charAt(0).toUpperCase() + d.slice(1))}</div><h1>${esc(title)}</h1></div></div></header>`;
+  }
+  function homeTiles() {
+    const t = today(), mine = myJobs();
+    let min = 0, hoses = 0;
+    for (const j of mine) { for (const r of j.hours || []) if (r.date === t) min += rowMin(r); if (j.status !== "sendt") hoses += hoseSums(j).count; }
     const waiting = allOrders().filter(({ o }) => o.status !== "mottatt").length;
-    const t = [["jobs", "Jobber", ""]];
-    if (modOn("orders") || waiting) t.push(["orders", "Bestill", waiting ? String(waiting) : ""]);
-    else if (S.home === "orders") S.home = "jobs";
-    return `<nav class="tabs"><div class="tabs-in" role="tablist">${t.map(([k, l, c]) => `<button class="tab" role="tab" data-a="home" data-v="${k}" aria-selected="${S.home === k}">${ICONS[k]}<span>${l}</span>${c ? `<span class="c">${c}</span>` : ""}</button>`).join("")}</div></nav>`;
+    const tiles = [];
+    if (modOn("hours")) tiles.push(`<div class="tile"><div class="v">${Math.floor(min / 60)}:${String(min % 60).padStart(2, "0")}</div><div class="k">Timer i dag</div></div>`);
+    if (modOn("hoses")) tiles.push(`<div class="tile"><div class="v">${hoses}</div><div class="k">Slanger i arbeid</div></div>`);
+    if (modOn("orders") || waiting) tiles.push(`<button class="tile" data-a="home" data-v="orders"><div class="v${waiting ? " warn" : ""}">${waiting}</div><div class="k">Må bestilles</div></button>`);
+    if (tiles.length < 3) tiles.unshift(`<div class="tile"><div class="v">${mine.filter((j) => j.status !== "sendt").length}</div><div class="k">Aktive jobber</div></div>`);
+    return `<div class="tiles" style="--n:${Math.min(3, tiles.length)}">${tiles.slice(0, 3).join("")}</div>`;
+  }
+  function bottomNav() {
+    const waiting = allOrders().filter(({ o }) => o.status !== "mottatt").length;
+    const showOrders = modOn("orders") || waiting;
+    if (!showOrders && S.home === "orders") S.home = "jobs";
+    const nb = (attrs, icon, label, cur, c) => `<button class="nb" ${attrs}${cur ? ' aria-current="page"' : ""}>${icon}<span>${label}</span>${c ? `<span class="c">${c}</span>` : ""}</button>`;
+    return `<nav class="bnav" aria-label="Hovedmeny"><div class="bnav-in">
+      <div class="side">${nb('data-a="home" data-v="jobs"', ICONS.jobs, "Jobber", S.home === "jobs")}${showOrders ? nb('data-a="home" data-v="orders"', ICONS.orders, "Bestill", S.home === "orders", waiting) : ""}</div>
+      <div class="gap"></div>
+      <div class="side">${S.isAdmin ? nb('data-a="team"', ICONS.team, "Kollegaer", false) : ""}${nb('data-a="settings"', ICONS.gear, "Innstillinger", false)}</div>
+      <button class="fab" data-a="new" aria-label="Ny jobb">${ICONS.plus}</button></div></nav>`;
   }
   function chips(name, cur, opts) {
     return `<div class="seg" role="group">${opts.map(([k, l]) => `<button data-a="${name}" data-v="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>`;
@@ -1460,7 +1528,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     const body = !all.length ? `<div class="empty"><p>Kollegaene har ingen jobber ennå.</p></div>`
       : !list.length ? `<div class="empty"><p>Ingen jobber her.</p></div>`
       : `<div class="joblist">${list.map(jobCard).join("")}</div>`;
-    return header("Kollegaers jobber", all.filter((j) => j.status !== "sendt").length + " aktive", `<button class="iconbtn" data-a="settings">‹ Innstillinger</button>`) +
+    return header("Kollegaers jobber", all.filter((j) => j.status !== "sendt").length + " aktive", `<button class="iconbtn" data-a="settings">${ICONS.back}<span>Innstillinger</span></button>`) +
       `<main>
       ${colleagues.length ? `<div class="fld"><span class="label">Tekniker</span>${chips("ufilter", S.ufilter, [["alle", "Alle"]].concat(colleagues.map((p) => [p.user_id, p.name || p.email])))}</div>` : ""}
       ${chips("tfilter", S.tfilter, [["alle", "Alle"], ["felt", "Felt"], ["butikk", "Butikk"], ["verksted", "Verksted"]])}
@@ -1475,15 +1543,21 @@ details summary { cursor: pointer; padding: 4px 0; }
     let body;
     if (S.mode === "loading" && !all.length) body = `<div class="empty"><p>Henter jobbene dine …</p></div>`;
     else if (!all.length) body = `<div class="empty"><h2>Ingen jobber ennå</h2><p>Opprett en jobb på en kunde. Deretter kan du måle opp slanger, føre varer og timer, og sende rapporten på e-post når jobben er ferdig.</p><div class="row"><button class="btn primary" data-a="new">+ Ny jobb</button><button class="btn" data-a="example">Last inn eksempeljobb</button></div></div>`;
-    else if (!list.length) body = `<div class="empty"><p>Ingen jobber her.</p></div>`;
-    else body = `<div class="joblist">${list.map(jobCard).join("")}</div>`;
-    return header("", nActive ? nActive + (nActive === 1 ? " aktiv jobb" : " aktive jobber") : "Ingen aktiv jobb", "", `<button class="iconbtn" data-a="settings">Innstillinger</button>`) + homeTabs() +
-      `<main>${modeBanner()}
-      <div class="pagehead"><h2>Jobber</h2><button class="btn primary" data-a="new">+ Ny jobb</button></div>
-      ${chips("tfilter", S.tfilter, [["alle", "Alle"], ["felt", "Felt"], ["butikk", "Butikk"], ["verksted", "Verksted"]])}
+    // "Fortsett der du slapp": the active job I touched last, shown on its own above the others.
+    const hero = all.length && !S.q.trim() && S.filter === "aktive" && S.tfilter === "alle" ? all.filter((j) => (j.status || "aktiv") === "aktiv").sort((a, b) => (b.updated || 0) - (a.updated || 0))[0] : null;
+    const rest = hero ? list.filter((j) => j !== hero) : list;
+    if (all.length && !rest.length) body = hero ? "" : `<div class="empty"><p>Ingen jobber her.</p></div>`;
+    else if (all.length) body = `<div class="joblist">${rest.map((j) => jobCard(j)).join("")}</div>`;
+    const title = nActive ? nActive + (nActive === 1 ? " jobb pågår" : " jobber pågår") : "Ingen jobber pågår";
+    return homeHeader(title, true) +
+      `<main class="with-bnav">${homeTiles()}${modeBanner()}
+      ${hero ? `<div class="sect">Fortsett der du slapp</div>${jobCard(hero, true)}` : ""}
+      <div class="pagehead"><h2>${hero ? "Andre jobber" : "Jobber"}</h2></div>
       <div class="toolbar"><input id="q" class="search" type="search" placeholder="Søk kunde, sted, ref, PO …" value="${esc(S.q)}" aria-label="Søk i jobber"></div>
+      <div class="chiprow">${chips("tfilter", S.tfilter, [["alle", "Alle"], ["felt", "Felt"], ["butikk", "Butikk"], ["verksted", "Verksted"]])}
       ${chips("filter", S.filter, [["aktive", "Pågår / ferdig"], ["sendt", "Sendt"], ["alle", "Alle"]])}
-      ${body}</main>`;
+      </div>
+      ${body}</main>` + bottomNav();
   }
   function modeBanner() {
     return S.mode === "local" && !STANDALONE ? `<div class="banner">Jobbene lagres bare i denne nettleseren på denne enheten. Åpne appen fra claude.ai mens du er innlogget for å lagre på kontoen din og få tilgang fra flere enheter.</div>` : "";
@@ -1495,11 +1569,13 @@ details summary { cursor: pointer; padding: 4px 0; }
     if (!S.isAdmin && j.assignedBy && j.assignedBy !== myId()) return `<span class="tb person">Fra ${esc(personName(j.assignedBy))}</span>`;
     return "";
   }
-  function jobCard(j) {
+  // Initials of the customer for the round badge on the card, e.g. "Bergen Mek. Verksted" -> "BM".
+  const initials = (name) => { const w = String(name || "").replace(/\b(AS|ASA|ANS|DA|AB)\b/gi, "").split(/[\s.\-]+/).filter((x) => /\p{L}/u.test(x)); return ((w[0] || "?")[0] + (w[1] ? w[1][0] : (w[0] || "").slice(1, 2))).toUpperCase(); };
+  function jobCard(j, hero) {
     const s = hoseSums(j), h = hourSums(j);
     const st = j.status || "aktiv", jt = j.jtype || "felt";
-    return `<button class="jobcard ${st}" data-a="open" data-id="${esc(j.id)}">
-      <span class="stripe"></span>
+    return `<button class="jobcard ${st}${hero ? " hero" : ""}" data-a="open" data-id="${esc(j.id)}">
+      <span class="av" aria-hidden="true">${esc(initials(j.kunde))}</span>
       <span class="grow"><span class="jt">${esc(j.kunde || "Uten kunde")}${j.example ? ' <span class="ex">Eksempel</span>' : ""}</span><span class="meta">${esc([j.beskrivelse, j.sted, fmtDate(j.dato), j.po && "PO " + j.po].filter(Boolean).join(" · "))}</span></span>
       <span class="pill ${st}">${STATUS[st]}</span>
       <span class="stats"><span class="tb ${jt}">${JTYPES[jt]}</span>${who(j)}${s.count ? `<span><b class="num">${s.count}</b> slanger</span>` : ""}${(j.items || []).length ? `<span><b class="num">${j.items.length}</b> varer</span>` : ""}${h.tot ? `<span><b class="num">${fmtMin(h.tot)}</b></span>` : ""}${(() => { const n = jobOrders(j.id).filter((o) => o.status !== "mottatt").length; return n ? `<span><b class="num">${n}</b> til bestilling</span>` : ""; })()}</span>
@@ -1579,7 +1655,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       <p class="hint">Trykk på statusen for å flytte en vare fra Venter til Bestilt og Mottatt.</p>${rows}</section>`;
   }
   function ordersView() {
-    return header("", "Må bestilles", "", `<button class="iconbtn" data-a="settings">Innstillinger</button>`) + homeTabs() + `<main>${ordersPanel(null)}</main>`;
+    return homeHeader("Må bestilles", false) + `<main class="with-bnav">${ordersPanel(null)}</main>` + bottomNav();
   }
 
   function jobView(j) {
@@ -1594,7 +1670,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     else if (S.tab === "send") content = sendTab(j);
     else if (S.tab === "orders") content = ordersPanel(j.id);
     else content = modTab(j, S.tab);
-    return header(j.kunde || "Ny jobb", [STATUS[j.status || "aktiv"], j.beskrivelse].filter(Boolean).join(" · "), `<button class="iconbtn" data-a="back" aria-label="Tilbake til jobblisten">‹ Jobber</button>`) + tabs + `<main>${content}</main>`;
+    return header(j.kunde || "Ny jobb", [j.beskrivelse, j.sted].filter(Boolean).join(" · "), `<button class="iconbtn" data-a="back" aria-label="Tilbake til jobblisten">${ICONS.back}<span>Jobber</span></button>`, `<span class="hpill">${esc([STATUS[j.status || "aktiv"], JTYPES[j.jtype || "felt"]].join(" · "))}</span>`) + tabs + `<main>${content}</main>`;
   }
 
   function fieldHtml(f, val, prefix) {
@@ -1791,11 +1867,12 @@ details summary { cursor: pointer; padding: 4px 0; }
   }
   function rowHtml(m, r, i, isEdit) {
     const acts = `<span class="acts">${m === "hoses" ? `<button class="btn sm" data-a="copyrow" data-i="${i}" title="Legg inn en lik slange under">Kopier</button>` : ""}<button class="btn sm" data-a="editrow" data-m="${m}" data-i="${i}">Endre</button><button class="btn sm danger ${S.armed === m + i ? "armed" : ""}" data-a="delrow" data-m="${m}" data-i="${i}" aria-label="Slett rad">${S.armed === m + i ? "Slett?" : "×"}</button></span>`;
-    let tag = "", main = "";
+    let tag = "", main = "", below = "";
     if (m === "hoses") {
       tag = esc(r.pos || "–");
-      main = `<strong>${esc(r.type)}</strong>${katName(r.type) ? ` <span class="d">${esc(katName(r.type))}</span>` : ""} · <span class="num">${nf(r.len, 0)} mm</span>${num(r.qty) > 1 ? ` <span class="num">×${esc(r.qty)}</span>` : ""}
-        <div class="d">${esc([[r.utstyr, r.sted].filter(Boolean).join(", "), (r.e1 || r.e2) && (r.e1 || "–") + " / " + (r.e2 || "–"), r.hylse && "Hylse " + r.hylse, addText(r), r.bar && r.bar + " bar", r.note].filter(Boolean).join(" · "))}</div>
+      main = `<strong class="num">${esc(r.type)}</strong>${num(r.qty) > 1 ? ` <span class="num">×${esc(r.qty)}</span>` : ""}${katName(r.type) ? ` <span class="d">${esc(katName(r.type))}</span>` : ""}
+        <div class="d">${esc([[r.utstyr, r.sted].filter(Boolean).join(", "), r.hylse && "Hylse " + r.hylse, addText(r), r.bar && r.bar + " bar", r.note].filter(Boolean).join(" · "))}</div>`;
+      below = `        <div class="hline" aria-label="${esc(`Ende 1 ${r.e1 || "ikke satt"}, ${nf(r.len, 0)} mm, ende 2 ${r.e2 || "ikke satt"}`)}"><span class="end">${esc(r.e1 || "–")}</span><span class="bar"><span>${nf(r.len, 0)} mm</span></span><span class="end">${esc(r.e2 || "–")}</span></div>
         ${(() => { const job = S.jobs[S.jobId], ph = job ? (job.photos || []).filter((p) => p.hose && p.hose === ridOf(r)) : []; return (ph.length ? photoThumbs(job, ph, false) : "") + `<button type="button" class="linkbtn" data-a="addphoto" data-hose="${esc(ridOf(r) || "")}">+ Bilde</button>`; })()}`;
     } else if (m === "tests") {
       const res = testResult(r);
@@ -1813,7 +1890,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       tag = `<span class="num">${fmtMin(rowMin(r))}</span>`;
       main = `<strong class="num">${r.from && r.to ? esc(r.from) + "–" + esc(r.to) : ""}</strong> <span class="kode">${esc(rowKode(r))}</span><div class="d">${esc([fmtDate(r.date), r.tech, r.desc].filter(Boolean).join(" · "))}</div>`;
     }
-    return `<div class="lrow ${isEdit ? "editing" : ""}"><span class="tag">${tag}</span><div class="main">${main}</div>${acts}</div>`;
+    return `<div class="lrow ${m === "hoses" ? "hose " : ""}${isEdit ? "editing" : ""}"><span class="tag">${tag}</span><div class="main">${main}</div>${acts}${below ? `<div class="below">${below}</div>` : ""}</div>`;
   }
   function otBox(rows) {
     const ot = beregnOvertid(rows || []);
@@ -1877,7 +1954,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     const account = sbUser ? `<section class="panel"><span class="label">Konto</span><p class="hint">Logget inn som <strong>${esc(sbUser.email || "")}</strong>. ${pending.size ? pending.size + " endringer venter på å bli synket." : "Alt er synket."}</p>
       <div class="row"><button class="btn" data-a="syncnow">Synk nå</button><button class="btn ghost" data-a="logout">Logg ut</button></div></section>` : "";
     const kat = KAT.state === "ready" ? KAT.list.length.toLocaleString("nb-NO") + " varer i katalogen." : KAT.state === "failed" ? "Fant ikke varekatalogen (varekatalog.json)." : "Henter varekatalogen …";
-    return header("Innstillinger", "Tess Mobilservice", `<button class="iconbtn" data-a="back">‹ Tilbake</button>`) +
+    return header("Innstillinger", "Tess Mobilservice", `<button class="iconbtn" data-a="back">${ICONS.back}<span>Tilbake</span></button>`) +
       `<main><section class="panel"><h2>Standardverdier</h2><div class="form">
       ${fieldHtml({ k: "email", l: "Standard e-post for rapport", w: 4, type: "email", ph: "ordre@firma.no" }, S.settings.email, "set-")}
       ${fieldHtml({ k: "tech", l: "Ditt navn (forslag på timer)", w: 4 }, S.settings.tech, "set-")}</div>
