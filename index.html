@@ -284,7 +284,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-19.4";
+  const APP_VERSION = "2026-10-28.1";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -352,23 +352,28 @@ details summary { cursor: pointer; padding: 4px 0; }
   const rowKode = (r) => r.kode || (r.from ? timekode(r.from, r.date) : r.kind || "TTM-0716");
 
   // ---------- product catalogue ----------
-  const KAT = { list: [], byNr: {}, state: "idle" };
+  const KAT = { list: [], byNr: {}, kind: {}, state: "idle" };
   function loadKat() {
     if (KAT.state !== "idle") return;
     KAT.state = "loading";
     fetch("varekatalog.json?v=" + APP_VERSION).then((r) => (r.ok ? r.json() : [])).then((d) => {
-      if (Array.isArray(d)) { KAT.list = d; for (const v of d) KAT.byNr[String(v.nr).toUpperCase()] = v.navn; }
+      if (Array.isArray(d)) { KAT.list = d; for (const v of d) { KAT.byNr[String(v.nr).toUpperCase()] = v.navn; if (v.t) KAT.kind[String(v.nr).toUpperCase()] = v.t; } }
       KAT.state = "ready";
     }).catch(() => { KAT.state = "failed"; });
   }
   const katName = (nr) => (nr ? KAT.byNr[String(nr).trim().toUpperCase()] || "" : "");
+  // Kind of part from the catalogue: "s" hose, "i" insert, "h" ferrule ("" when unknown). The hose form only suggests the
+  // kind each field is for.
+  const katKind = (nr) => (nr ? KAT.kind[String(nr).trim().toUpperCase()] || "" : "");
+  const FIELD_KIND = { "hoses-type": "s", "hoses-e1": "i", "hoses-e2": "i", "hoses-hylse": "h" };
   // Hose dimension is the last two digits after a dash: 5256-04, 6571-122-04, 6501-04 and 65125-04 are all size 04.
   const dimOf = (nr) => { const m = String(nr || "").trim().match(/-(\d{2})$/); return m ? m[1] : ""; };
   const sameDim = (nr, dim) => !dim || !dimOf(nr) || dimOf(nr) === dim;
-  function katSearch(q, max, dim) {
+  function katSearch(q, max, dim, kind) {
     const ql = q.toLowerCase(), first = [], rest = [];
     for (const v of KAT.list) {
       if (dim && !sameDim(v.nr, dim)) continue;
+      if (kind && v.t !== kind) continue;
       const nr = String(v.nr).toLowerCase();
       if (nr.startsWith(ql)) { first.push(v); if (first.length >= max) break; }
       else if (rest.length < max && (nr.includes(ql) || String(v.navn).toLowerCase().includes(ql))) rest.push(v);
@@ -1982,9 +1987,17 @@ details summary { cursor: pointer; padding: 4px 0; }
     const ql = q.toLowerCase();
     // Empty field: only parts of the right kind in exactly this dimension (ferrules for Hylse, inserts for the ends).
     const browse = dim && !q;
-    const kind = inp.id === "hoses-hylse" ? /HYLSE/i : /INNSATS/i;
-    const used = inp.dataset.mod ? suggestions(inp.dataset.mod, inp.dataset.cat.split(",")).filter((s) => s.toLowerCase().includes(ql) && s.toLowerCase() !== ql && (browse ? dimOf(s) === dim : sameDim(s, dim))).slice(0, browse ? 8 : 5) : [];
-    const hits = (browse ? KAT.list.filter((v) => dimOf(v.nr) === dim && kind.test(v.navn)).slice(0, 40) : katSearch(q, 30, dim)).filter((v) => !used.includes(v.nr));
+    const kind = FIELD_KIND[inp.id] || "";
+    // Numbers used before in this field: kept unless the catalogue says they are another kind of part.
+    const used = inp.dataset.mod ? suggestions(inp.dataset.mod, inp.dataset.cat.split(",")).filter((s) => s.toLowerCase().includes(ql) && s.toLowerCase() !== ql && (browse ? dimOf(s) === dim : sameDim(s, dim)) && (!kind || !katKind(s) || katKind(s) === kind)).slice(0, browse ? 8 : 5) : [];
+    let hits;
+    if (browse) hits = KAT.list.filter((v) => dimOf(v.nr) === dim && v.t === kind).slice(0, 40);
+    else if (kind) {
+      // Only parts of this kind. A number the catalogue has not sorted (not in the handbook) still shows if nothing else matches.
+      hits = KAT.list.length ? katSearch(q, 30, dim, kind) : [];
+      if (!hits.length) hits = katSearch(q, 30, dim).filter((v) => !v.t);
+    } else hits = katSearch(q, 30, dim);
+    hits = hits.filter((v) => !used.includes(v.nr));
     if (!used.length && !hits.length) return;
     const box = document.createElement("div");
     box.className = "ac"; box.id = "ac"; box.dataset.for = inp.id;
