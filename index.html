@@ -284,7 +284,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-10-28.1";
+  const APP_VERSION = "2026-11-02.1";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -1852,8 +1852,12 @@ details summary { cursor: pointer; padding: 4px 0; }
     if (!rows.length) list = `<p class="hint">Ingenting registrert ennå.</p>`;
     else if (m === "items") list = `<div class="ledger">${groupItems(rows).map((g) => `<div class="grp"><span>${esc(g.label)}</span></div>` + g.rows.map(({ r, i }) => rowHtml(m, r, i, editing && editing.idx === i)).join("")).join("")}</div>`;
     else if (m === "hours") list = `<div class="ledger">${rows.map((r, i) => ({ r, i })).sort((a, b) => String(b.r.date + b.r.from).localeCompare(String(a.r.date + a.r.from))).map(({ r, i }) => rowHtml(m, r, i, editing && editing.idx === i)).join("")}</div>`;
+    // Hoses: newest on top, only here on screen. The stored order, and so the report and the Excel lists, stays by position.
+    else if (m === "hoses") list = `<div class="ledger">${rows.map((r, i) => ({ r, i })).reverse().map(({ r, i }) => rowHtml(m, r, i, editing && editing.idx === i)).join("")}</div>`;
     else list = `<div class="ledger">${rows.map((r, i) => rowHtml(m, r, i, editing && editing.idx === i)).join("")}</div>`;
-    return form + `<section class="panel"><div class="row"><h2 class="grow">${def.title}</h2><span class="label">${rows.length} rader</span></div>${totalsHtml(j, m)}${list}</section>`;
+    const head = `<div class="row"><h2 class="grow">${def.title}</h2><span class="label">${rows.length} rader</span></div>`;
+    // The hose summary goes under the list, so the newest hose is right below the form.
+    return form + `<section class="panel">${head}${m === "hoses" ? list + totalsHtml(j, m) : totalsHtml(j, m) + list}</section>`;
   }
   function hoursPreview(from, to, date) {
     if (!from || !to) return "";
