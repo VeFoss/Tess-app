@@ -210,7 +210,19 @@ button.pill { cursor: pointer; min-height: 34px; padding: 4px 10px; }
 .lrow .tag { font: 600 13px var(--f-mono); background: var(--sunk); border: 0; border-radius: 999px; padding: 4px 9px; min-width: 2.4em; text-align: center; white-space: nowrap; }
 .lrow.hose .tag { background: var(--tint); color: var(--brand); font: 800 14px var(--f-display); min-width: 32px; height: 32px; padding: 0; display: grid; place-items: center; }
 .lrow .below { grid-column: 1 / -1; min-width: 0; }
-@media (max-width: 520px) { .lrow.hose { grid-template-columns: auto 1fr; } .lrow.hose .below { order: 2; } .lrow.hose .acts { order: 3; grid-column: 1 / -1; justify-content: flex-end; } }
+.lrow.run .below { display: grid; gap: 8px; }
+.runbtns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pill.runst { min-height: 44px; padding: 8px 16px; font-size: 14px; }
+.flag { margin-top: 6px; padding: 8px 12px; border-radius: 12px; background: var(--warn-bg); color: var(--warn); font-weight: 600; font-size: 14px; }
+.matgrp { display: grid; gap: 4px; }
+.matnote { background: var(--tint); color: var(--ink); border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+.chkrow { display: grid; grid-template-columns: 52px 1fr; gap: 6px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: center; }
+.chkbtn { width: 52px; height: 52px; border-radius: 14px; border: 2px solid var(--line); background: var(--sunk); color: transparent; display: grid; place-items: center; cursor: pointer; }
+.chkbtn svg { width: 28px; height: 28px; }
+.chkbtn[aria-pressed="true"] { background: var(--brand-deep); border-color: var(--brand-deep); color: #fff; }
+.chkrow .t { font-weight: 600; }
+.chkrow input { grid-column: 1 / -1; width: 100%; min-width: 0; min-height: 48px; border: 1px solid var(--line); background: var(--sunk); border-radius: 12px; padding: 10px; }
+@media (max-width: 520px) { .lrow.hose, .lrow.run { grid-template-columns: auto 1fr; } .lrow.hose .below, .lrow.run .below { order: 2; } .lrow.hose .acts, .lrow.run .acts { order: 3; grid-column: 1 / -1; justify-content: flex-end; } }
 .hline { display: flex; align-items: center; gap: 6px; margin: 16px 0 6px; }
 .hline .end { flex: none; max-width: 38%; padding: 4px 8px; border-radius: 8px; background: var(--sunk); border: 1px solid var(--line); font: 500 12px var(--f-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hline .bar { flex: 1; min-width: 48px; height: 6px; border-radius: 3px; background: var(--ink); position: relative; display: flex; justify-content: center; }
@@ -284,7 +296,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-11-02.1";
+  const APP_VERSION = "2026-11-04.1";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -405,6 +417,8 @@ details summary { cursor: pointer; padding: 4px 0; }
   const UNITS = ["stk", "m", "dm", "liter", "kg", "sett", "pose", "pk"];
   const ORDER_UNITS = ["stk", "m", "rull", "eske", "sett", "liter"];
   const JTYPES = { felt: "Felt", butikk: "Butikk", verksted: "Verksted" };
+  const RUN_ENDS = ["24° DIN", "SAE-flens", "Sveis", "Annet"];
+  const RUN_STATUS = ["Ikke målt", "Mal laget", "Målt"];
   const MODS = {
     hoses: {
       title: "Slanger", add: "Legg til slange",
@@ -474,6 +488,28 @@ details summary { cursor: pointer; padding: 4px 0; }
         { k: "inspector", l: "Kontrollør (navn eller ID)", w: 4, def: () => S.settings.tech || "" }
       ],
       keep: ["kind", "date", "maker", "pclass", "equip", "inspector"]
+    },
+    runs: {
+      title: "Rørstrekk", add: "Legg til rørstrekk",
+      fields: [
+        { k: "tag", l: "ID / tag", w: 1, ph: "R-01", req: true },
+        { k: "sys", l: "System / funksjon", w: 3, ph: "F.eks. Trykk P1", list: true },
+        { k: "fra", l: "Fra", w: 2, list: true },
+        { k: "til", l: "Til", w: 2, list: true },
+        { k: "od", l: "Dimensjon (OD × vegg)", w: 2, ph: "25×3", list: true, req: true },
+        { k: "mat", l: "Materiale", w: 2, opts: ["316L", "Karbonstål", "Annet"] },
+        { k: "wp", l: "Trykkklasse / arbeidstrykk", w: 4, list: true },
+        { k: "e1", l: "Kobling ende 1", w: 2, opts: RUN_ENDS },
+        { k: "e2", l: "Kobling ende 2", w: 2, opts: RUN_ENDS },
+        { k: "len", l: "Estimert lengde (m)", w: 2, num: true, req: true },
+        { k: "xsk", l: "Ekstra skjøter (manuelt)", w: 2, num: true },
+        { k: "bends", l: "Antall bøyer", w: 2, num: true },
+        { k: "clamps", l: "Antall klammer", w: 2, num: true },
+        { k: "status", l: "Status", w: 4, opts: RUN_STATUS },
+        { k: "flag", l: "Varsel (valgfritt)", w: 4, ph: "F.eks. trang tilkomst ved luke" },
+        { k: "note", l: "Notater", w: 4, area: true }
+      ],
+      keep: ["sys", "od", "mat", "wp", "e1", "e2"]
     }
   };
   const ORDER_FIELDS = [
@@ -501,17 +537,19 @@ details summary { cursor: pointer; padding: 4px 0; }
   ICONS.back = ico('<path d="M15 5l-7 7 7 7"/>');
   ICONS.plus = ico('<path d="M12 5v14M5 12h14"/>');
   ICONS.gear = ico('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/>');
-  ICONS.team = ico('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.3-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5c2 .6 3.2 2.5 3.6 5.5"/>');
+  ICONS.befaring = ico('<path d="M4 7h7a4 4 0 0 1 4 4v9"/><path d="M4 11h7v9"/><path d="M4 5v8M13 20h4"/>');
+  ICONS.check = ico('<path d="M5 12.5l4.5 4.5L19 7"/>');
   const TABS = [["info", "Jobb"], ["hoses", "Slanger"], ["tests", "Sikkerhetstest"], ["items", "Varer"], ["hours", "Timer"], ["orders", "Bestill"], ["notes", "Notater"], ["send", "Rapport"]];
   // Modules each user can turn off in Innstillinger. All are on by default, except the safety test (welding equipment only).
   // A tab stays visible in a job that already has something registered in it.
-  const MOD_TOGGLES = [["hoses", "Slanger", "oppmåling av slanger og produksjonsliste"], ["tests", "Sikkerhetstest", "sveiseapparater, IEC 60974-4, rapport som PDF"], ["items", "Varer", "materiell brukt på jobben"], ["hours", "Timer", "timeføring med TTM-koder og overtid"], ["orders", "Bestill", "varer som må bestilles"], ["notes", "Notater", "notater, avvik og bilder"]];
-  const modKey = (k) => (k === "tests" ? "tests" : "show_" + k);
-  const modOn = (k) => !MOD_TOGGLES.some(([m]) => m === k) || (k === "tests" ? !!S.settings.tests : S.settings[modKey(k)] !== false);
+  const MOD_TOGGLES = [["hoses", "Slanger", "oppmåling av slanger og produksjonsliste"], ["tests", "Sikkerhetstest", "sveiseapparater, IEC 60974-4, rapport som PDF"], ["items", "Varer", "materiell brukt på jobben"], ["hours", "Timer", "timeføring med TTM-koder og overtid"], ["orders", "Bestill", "varer som må bestilles"], ["notes", "Notater", "notater, avvik og bilder"], ["befaring", "Befaring", "rørjobber: rørstrekk, materialberegning og sjekkliste"]];
+  const MOD_OPT_IN = ["tests", "befaring"];
+  const modKey = (k) => (MOD_OPT_IN.includes(k) ? k : "show_" + k);
+  const modOn = (k) => !MOD_TOGGLES.some(([m]) => m === k) || (MOD_OPT_IN.includes(k) ? !!S.settings[k] : S.settings[modKey(k)] !== false);
   const STATUS = { aktiv: "Pågår", ferdig: "Ferdig", sendt: "Sendt" };
 
   // ---------- state ----------
-  const S = { jobs: {}, orders: [], ordersUpdated: 0, settings: { type: "settings", email: "", tech: "" }, view: "list", home: "jobs", jobId: null, tab: "info", filter: "aktive", tfilter: "alle", ofilter: "alle", ufilter: "alle", q: "", edit: null, mode: "loading", saveState: "", armed: null,
+  const S = { jobs: {}, surveys: {}, sid: null, bfilter: "aktive", orders: [], ordersUpdated: 0, settings: { type: "settings", email: "", tech: "" }, view: "list", home: "jobs", jobId: null, tab: "info", filter: "aktive", tfilter: "alle", ofilter: "alle", ufilter: "alle", q: "", edit: null, mode: "loading", saveState: "", armed: null,
     profiles: [], isAdmin: false, ownerOf: {}, moveFrom: {}, base: {} };
   let col = null, downloads = null;
   const dirty = new Set(), timers = {}, inflight = {}, again = {};
@@ -520,8 +558,14 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Local copy on this device. When signed in, the keys are scoped to the user so two people can share a device.
   let prefix = "jobbkort.";
   const pending = new Set();
+  // Surveys (Befaring) are documents of their own, with ids starting "bf-". They sync like jobs, in the same table,
+  // but are kept apart from the jobs here so nothing that works on jobs sees them.
+  const isSurveyId = (id) => String(id).startsWith("bf-");
+  const storeOf = (id) => (isSurveyId(id) ? S.surveys : S.jobs);
+  const curDoc = () => (S.view === "survey" ? S.surveys[S.sid] : S.jobs[S.jobId]);
   function saveLocal() {
     lsSet(prefix + "jobs", JSON.stringify(S.jobs));
+    lsSet(prefix + "surveys", JSON.stringify(S.surveys));
     lsSet(prefix + "orders", JSON.stringify({ list: S.orders, updated: S.ordersUpdated }));
     lsSet(prefix + "settings", JSON.stringify(S.settings));
     if (prefix !== "jobbkort.") {
@@ -534,6 +578,10 @@ details summary { cursor: pointer; padding: 4px 0; }
   function loadLocal() {
     S.jobs = {}; S.orders = []; S.ordersUpdated = 0; S.settings = { type: "settings", email: "", tech: "" };
     try { const j = JSON.parse(lsGet(prefix + "jobs") || "{}"); if (j && typeof j === "object") S.jobs = j; } catch (e) {}
+    S.surveys = {};
+    try { const v = JSON.parse(lsGet(prefix + "surveys") || "{}"); if (v && typeof v === "object") S.surveys = v; } catch (e) {}
+    // An app version from before this module may have kept a survey it pulled among the jobs.
+    for (const id of Object.keys(S.jobs)) if (isSurveyId(id)) { if (!S.surveys[id]) S.surveys[id] = S.jobs[id]; delete S.jobs[id]; }
     try {
       const o = JSON.parse(lsGet(prefix + "orders") || "[]");
       if (Array.isArray(o)) S.orders = o; else if (o && Array.isArray(o.list)) { S.orders = o.list; S.ordersUpdated = o.updated || 0; }
@@ -547,6 +595,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     S.base = {};
     try { const b = JSON.parse(lsGet(prefix + "base") || "{}"); if (b && typeof b === "object") S.base = b; } catch (e) {}
     for (const j of Object.values(S.jobs)) ensureRids(j);
+    for (const j of Object.values(S.surveys)) ensureRids(j);
     for (const j of Object.values(S.base)) ensureRids(j);
     moveJobOrders();
   }
@@ -555,12 +604,12 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Two people (or two devices) can change the same job before it syncs. Instead of the last save winning the whole
   // job, the server version is merged with mine: rows by their id, other fields one by one, against the last version
   // both sides agreed on (S.base). What I changed since then wins; everything else comes from the server.
-  const ROW_LISTS = ["hoses", "items", "hours", "orders", "photos", "tests"];
+  const ROW_LISTS = ["hoses", "items", "hours", "orders", "photos", "tests", "runs", "checks"];
   const newRid = () => "r" + uid8();
   function hashStr(str) { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
   // Rows from before ids existed get one computed from content and position, so every device arrives at the same id.
   function ensureRids(job) {
-    if (!job || job.type !== "job") return job;
+    if (!job || (job.type !== "job" && job.type !== "survey")) return job;
     for (const k of ROW_LISTS) (job[k] || []).forEach((r, i) => { if (r && !r.rid && !r.id) r.rid = "L" + hashStr(k + i + JSON.stringify(r)); });
     return job;
   }
@@ -664,7 +713,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     if (el) { el.textContent = SAVE_TEXT[st] || ""; el.className = "savestate" + (st === "err" || st === "offline" ? " err" : ""); }
   }
   function touch(id) {
-    const job = S.jobs[id];
+    const job = storeOf(id)[id];
     if (job) { job.updated = Date.now(); ensureRids(job); }
     if (id === "settings") S.settings.updated = Date.now();
     if (id === "orders") S.ordersUpdated = Date.now();
@@ -676,7 +725,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   function docBody(id) {
     if (id === "settings") return S.settings;
     if (id === "orders") return { type: "orders", list: S.orders, updated: S.ordersUpdated };
-    return S.jobs[id];
+    return storeOf(id)[id];
   }
   async function flush(id) {
     if (prefix !== "jobbkort.") { pending.add(id); dirty.delete(id); saveLocal(); if (sb) schedulePush(); else setSave("offline"); return; }
@@ -834,14 +883,14 @@ details summary { cursor: pointer; padding: 4px 0; }
       const isJob = r.id !== "settings" && r.id !== "orders";
       if (pending.has(r.id) || dirty.has(r.id)) {
         // A job I have unsent changes to: if the server version moved on since our common version, merge the two.
-        const cur = S.jobs[r.id];
-        if (isJob && !dirty.has(r.id) && !r.deleted && cur && r.data && r.data.type === "job") {
+        const cur = storeOf(r.id)[r.id];
+        if (isJob && !dirty.has(r.id) && !r.deleted && cur && r.data && (r.data.type === "job" || r.data.type === "survey")) {
           const base = S.base[r.id] || null;
           if (up > ((base && base.updated) || 0)) {
             const theirs = ensureRids(clone(r.data));
             const merged = mergeJob(base, cur, theirs);
             merged.owner = cur.owner || r.user_id;
-            S.jobs[r.id] = merged;
+            storeOf(r.id)[r.id] = merged;
             S.base[r.id] = theirs;
             changed = true;
           }
@@ -850,13 +899,13 @@ details summary { cursor: pointer; padding: 4px 0; }
       }
       if (r.id === "settings") { if (!r.deleted && up > (S.settings.updated || 0)) { S.settings = Object.assign({ type: "settings", email: "", tech: "" }, r.data); changed = true; } continue; }
       if (r.id === "orders") { if (!r.deleted && up > (S.ordersUpdated || 0)) { S.orders = (r.data && r.data.list) || []; S.ordersUpdated = up; changed = true; } continue; }
-      const cur = S.jobs[r.id];
-      if (r.deleted) { delete S.base[r.id]; if (cur) { delete S.jobs[r.id]; if (S.jobId === r.id) { S.view = "list"; S.jobId = null; } changed = true; } continue; }
-      if (!cur || up > (cur.updated || 0) || ownerOf(cur) !== r.user_id) { S.jobs[r.id] = ensureRids(Object.assign({}, r.data, { owner: r.user_id })); changed = true; }
+      const store = storeOf(r.id), cur = store[r.id];
+      if (r.deleted) { delete S.base[r.id]; if (cur) { delete store[r.id]; if (S.jobId === r.id) { S.view = "list"; S.jobId = null; } if (S.sid === r.id) { S.view = "list"; S.sid = null; } changed = true; } continue; }
+      if (!cur || up > (cur.updated || 0) || ownerOf(cur) !== r.user_id) { store[r.id] = ensureRids(Object.assign({}, r.data, { owner: r.user_id })); changed = true; }
       if (!S.base[r.id] || up >= (S.base[r.id].updated || 0)) S.base[r.id] = ensureRids(clone(r.data));
     }
     // Anything here that the server has never seen gets uploaded.
-    for (const id of Object.keys(S.jobs)) if (!seen.has(id)) pending.add(id);
+    for (const id of Object.keys(S.jobs).concat(Object.keys(S.surveys))) if (!seen.has(id)) pending.add(id);
     if (!seen.has("orders") && S.orders.length) pending.add("orders");
     if (!seen.has("settings") && (S.settings.email || S.settings.tech)) pending.add("settings");
     return changed;
@@ -907,7 +956,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   async function logout() {
     if (pending.size && sb && navigator.onLine) await syncNow();
     if (sb) { try { await sb.auth.signOut(); } catch (e) {} }
-    sbUser = null; prefix = "jobbkort."; S.jobs = {}; S.orders = []; S.profiles = []; S.isAdmin = false; pending.clear();
+    sbUser = null; prefix = "jobbkort."; S.jobs = {}; S.surveys = {}; S.sid = null; S.orders = []; S.profiles = []; S.isAdmin = false; pending.clear();
     lsSet("jobbkort.lastUser", "");
     S.view = "login"; render();
   }
@@ -981,7 +1030,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   }
   function suggestions(mod, keys) {
     const set = new Set();
-    for (const j of Object.values(S.jobs)) for (const r of (j && j[mod]) || []) for (const f of keys) if (r[f]) set.add(r[f]);
+    for (const j of Object.values(mod === "runs" ? S.surveys : S.jobs)) for (const r of (j && j[mod]) || []) for (const f of keys) if (r[f]) set.add(r[f]);
     return [...set];
   }
   const withName = (code) => { const n = katName(code); return n ? code + " " + n : code; };
@@ -1463,9 +1512,10 @@ details summary { cursor: pointer; padding: 4px 0; }
     if (S.view === "boot") app.innerHTML = header("", "Starter …", "") + `<main><div class="empty"><p>Henter jobbene dine …</p></div></main>`;
     else if (S.view === "login" || S.view === "newpass") app.innerHTML = loginView(S.view === "newpass");
     else if (S.view === "job" && S.jobs[S.jobId]) app.innerHTML = jobView(S.jobs[S.jobId]);
+    else if (S.view === "survey" && S.surveys[S.sid]) app.innerHTML = surveyView(S.surveys[S.sid]);
     else if (S.view === "settings") app.innerHTML = settingsView();
     else if (S.view === "team") app.innerHTML = teamView();
-    else { S.view = "list"; app.innerHTML = S.home === "orders" ? ordersView() : listView(); }
+    else { S.view = "list"; if (S.home === "surveys" && !surveysShown()) S.home = "jobs"; app.innerHTML = S.home === "orders" ? ordersView() : S.home === "surveys" ? surveysView() : listView(); }
     setSave(S.saveState);
     hydratePhotos();
     if (S.keepScroll) window.scrollTo(0, y);
@@ -1506,8 +1556,167 @@ details summary { cursor: pointer; padding: 4px 0; }
     return `<nav class="bnav" aria-label="Hovedmeny"><div class="bnav-in">
       <div class="side">${nb('data-a="home" data-v="jobs"', ICONS.jobs, "Jobber", S.view === "list" && S.home === "jobs")}${showOrders ? nb('data-a="home" data-v="orders"', ICONS.orders, "Bestill", S.view === "list" && S.home === "orders", waiting) : ""}</div>
       <div class="gap"></div>
-      <div class="side">${S.isAdmin ? nb('data-a="team"', ICONS.team, "Kollegaer", S.view === "team") : ""}${nb('data-a="settings"', ICONS.gear, "Innstillinger", S.view === "settings")}</div>
-      <button class="fab" data-a="new" aria-label="Ny jobb">${ICONS.plus}</button></div></nav>`;
+      <div class="side">${surveysShown() ? nb('data-a="home" data-v="surveys"', ICONS.befaring, "Befaring", S.view === "list" && S.home === "surveys") : ""}${nb('data-a="settings"', ICONS.gear, "Innstillinger", S.view === "settings" || S.view === "team")}</div>
+      <button class="fab" data-a="new" aria-label="${S.view === "list" && S.home === "surveys" ? "Ny befaring" : "Ny jobb"}">${ICONS.plus}</button></div></nav>`;
+  }
+  // ---------- Befaring: survey before a pipe job ----------
+  const BF_DEFAULT = { kapp: 15, svinn: 10, usable: 5.5 };
+  const PIPE_LEN = 6;   // pipes come in 6 m lengths
+  const BF_CHECKS = [
+    ["trykktest", "Trykktest-krav (medium og trykk)"],
+    ["spyling", "Spyling og renhetsklasse"],
+    ["sertifikat", "Sertifikater (3.1) og dokumentasjon/merking"],
+    ["tilkomst", "Tilkomst og innbæring av rør (lengder, luker)"],
+    ["gjenbruk", "Gjenbruk vs nytt (klammer, gjennomføringer, flenser)"],
+    ["tillatelser", "Arbeidstillatelser / varmt arbeid"],
+    ["stillas", "Stillas, løfteutstyr, strøm"],
+    ["stans", "Når anlegget kan stå stille"],
+    ["vibrasjon", "Vibrasjon, slitasje og termisk ekspansjon"]
+  ];
+  const RUN_PILL = { "Ikke målt": "venter", "Mal laget": "bestilt", "Målt": "mottatt" };
+  const mySurveys = () => Object.values(S.surveys).filter((v) => v && v.type === "survey" && ownerOf(v) === myId());
+  const surveysShown = () => modOn("befaring") || mySurveys().length > 0;
+  const surveyTitle = (v) => v.navn || v.kunde || "Ny befaring";
+  const runLabel = (v, rid) => { const r = (v.runs || []).find((x) => ridOf(x) === rid); return r ? r.tag || "Rørstrekk" : "Rørstrekk"; };
+  const normOd = (t) => String(t || "").trim().replace(/\s*[xX×*]\s*/, "×").replace(/\./g, ",");
+  // Up to whole numbers, without a calculation like 3 x 1.1 landing just above 3.3 and adding one too many.
+  const up = (n) => Math.ceil(n - 1e-9);
+  const countOf = (n, one, many) => n + " " + (n === 1 ? one : many);
+  const pctText = (n) => (Number(n) || 0).toLocaleString("nb-NO", { maximumFractionDigits: 1 }) + " %";
+  // Joints in one run: rund opp (lengde / brukbar lengde) - 1, plus the ones added by hand.
+  function runJoints(r, usable) {
+    return Math.max(0, up(num(r.len) / usable) - 1) + Math.max(0, Math.round(num(r.xsk)));
+  }
+  // Material totals. Fittings follow the pipe material, so everything is grouped by dimension + material.
+  function surveyMat(v) {
+    const kapp = num(v.kapp), svinn = num(v.svinn), usable = num(v.usable) > 0 ? num(v.usable) : BF_DEFAULT.usable;
+    const groups = {};
+    let clamps = 0, bends = 0;
+    for (const r of v.runs || []) {
+      const od = normOd(r.od) || "Ukjent", mat = r.mat || "Annet", key = od + " " + mat;
+      const g = groups[key] || (groups[key] = { key, od, mat, m: 0, joints: 0, ends: {}, nuts: 0 });
+      const j = runJoints(r, usable);
+      g.m += num(r.len); g.joints += j; g.nuts += 2 * j;
+      for (const e of [r.e1, r.e2]) {
+        const t = e || "Annet";
+        g.ends[t] = (g.ends[t] || 0) + 1;
+        if (t === "24° DIN") g.nuts += 1;
+      }
+      clamps += Math.max(0, Math.round(num(r.clamps))); bends += Math.max(0, Math.round(num(r.bends)));
+    }
+    const list = Object.values(groups).sort((a, b) => a.key.localeCompare(b.key, "nb", { numeric: true }));
+    for (const g of list) {
+      g.mTot = g.m * (1 + kapp / 100);
+      g.lengths = up(g.mTot / PIPE_LEN);
+      g.nutsTot = up(g.nuts * (1 + svinn / 100));    // nuts and cutting rings are always the same number
+    }
+    return { kapp, svinn, usable, list, clamps, bends };
+  }
+  function matHtml(v) {
+    const t = surveyMat(v);
+    if (!t.list.length) return `<p class="hint">Oppsummeringen fylles ut når du legger inn rørstrekk.</p>`;
+    const table = (title, rows) => rows.length ? `<div class="matgrp"><span class="label">${title}</span><table class="sumtable">${rows.map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).join("")}</table></div>` : "";
+    const ends = [];
+    for (const g of t.list) for (const [e, n] of Object.entries(g.ends)) ends.push([g.key + ", " + e, n + " stk"]);
+    return `<div class="matnote">Lagt inn: <b>${pctText(t.kapp)} kapp</b> på rør og <b>${pctText(t.svinn)} svinn</b> på muttere og snittringer. Brukbar lengde per rør: ${esc(nf(t.usable, 1))} m.</div>
+      ${table("Rør (6 m-lengder)", t.list.map((g) => [g.key + ": " + nf(g.m, 1) + " m + " + pctText(t.kapp) + " = " + nf(g.mTot, 1) + " m", countOf(g.lengths, "lengde", "lengder")]))}
+      ${table("Skjøter (1 rett kobling + 2 muttere + 2 snittringer)", t.list.filter((g) => g.joints).map((g) => [g.key + ", rett kobling", g.joints + " stk"]))}
+      ${table("Endekoblinger", ends)}
+      ${table("Muttere og snittringer (hver)", t.list.filter((g) => g.nuts).map((g) => [g.key + ": " + g.nuts + " + " + pctText(t.svinn), g.nutsTot + " stk"]))}
+      ${table("Totalt", [["Klammer", t.clamps + " stk"], ["Bøyer", t.bends + " stk"]])}`;
+  }
+  function surveysView() {
+    const q = S.q.trim().toLowerCase(), all = mySurveys();
+    const list = all.filter((v) => S.bfilter === "alle" || (S.bfilter === "aktive" ? v.status !== "ferdig" : v.status === "ferdig"))
+      .filter((v) => !q || [v.navn, v.kunde, v.sted, v.kontakt, v.deltakere].join(" ").toLowerCase().includes(q))
+      .sort((a, b) => (b.updated || 0) - (a.updated || 0));
+    const body = !all.length ? `<div class="empty"><h2>Ingen befaringer ennå</h2><p>Trykk på den runde knappen for å starte en befaring.</p></div>`
+      : !list.length ? `<div class="empty"><p>Ingen befaringer her.</p></div>`
+      : `<div class="joblist">${list.map(surveyCard).join("")}</div>`;
+    return homeHeader("Befaring", false) + `<main class="with-bnav">
+      <div class="toolbar"><input id="q" class="search" type="search" placeholder="Søk tittel, kunde, fartøy …" value="${esc(S.q)}" aria-label="Søk i befaringer"></div>
+      ${chips("bfilter", S.bfilter, [["aktive", "Pågår"], ["ferdig", "Ferdig"], ["alle", "Alle"]])}
+      ${body}</main>` + bottomNav();
+  }
+  function surveyCard(v) {
+    const runs = v.runs || [], st = v.status === "ferdig" ? "ferdig" : "aktiv";
+    const meters = runs.reduce((a, r) => a + num(r.len), 0), done = runs.filter((r) => r.status === "Målt").length, flags = runs.filter((r) => r.flag).length;
+    return `<button class="jobcard ${st}" data-a="opensurvey" data-id="${esc(v.id)}">
+      <span class="av" aria-hidden="true">${esc(initials(v.kunde || v.navn))}</span>
+      <span class="grow"><span class="jt">${esc(surveyTitle(v))}</span><span class="meta">${esc([v.navn ? v.kunde : "", v.sted, fmtDate(v.dato)].filter(Boolean).join(" · "))}</span></span>
+      <span class="pill ${st}">${STATUS[st]}</span>
+      <span class="stats"><span><b class="num">${runs.length}</b> rørstrekk</span><span><b class="num">${nf(meters, 1)}</b> m</span><span><b class="num">${done}/${runs.length}</b> målt</span>${flags ? `<span><b class="num">${flags}</b> varsel</span>` : ""}</span>
+    </button>`;
+  }
+  const SURVEY_TABS = [["oversikt", "Oversikt", "info"], ["runs", "Rørstrekk", "befaring"], ["checks", "Sjekkliste", "check"], ["report", "Rapport", "send"]];
+  function surveyView(v) {
+    if (!SURVEY_TABS.some(([k]) => k === S.tab)) S.tab = "oversikt";
+    const counts = { runs: (v.runs || []).length, checks: (v.checks || []).filter((c) => c.ok).length };
+    const tabs = `<nav class="tabs"><div class="tabs-in" role="tablist">${SURVEY_TABS.map(([k, l, ic]) => `<button class="tab" role="tab" data-a="tab" data-v="${k}" aria-selected="${S.tab === k}">${ICONS[ic]}<span>${l}</span>${counts[k] ? `<span class="c">${counts[k]}</span>` : ""}</button>`).join("")}</div></nav>`;
+    const content = S.tab === "runs" ? modTab(v, "runs") : S.tab === "checks" ? checksTab(v) : S.tab === "report" ? surveyReportTab(v) : surveyInfoTab(v);
+    return header(surveyTitle(v), [v.navn ? v.kunde : "", v.sted].filter(Boolean).join(" · "), `<button class="iconbtn" data-a="back" aria-label="Tilbake til befaringene">${ICONS.back}<span>Befaring</span></button>`, `<span class="hpill">${esc(STATUS[v.status === "ferdig" ? "ferdig" : "aktiv"])}</span>`) + tabs + `<main>${content}</main>`;
+  }
+  function surveyInfoTab(v) {
+    const live = (k, l, val) => `<div class="fld w1 wide-m"><label for="b-${k}">${l}</label><input id="b-${k}" name="${k}" inputmode="decimal" value="${esc(val)}" data-f="${k}" data-live="1"></div>`;
+    return `<section class="panel"><h2>Materialoppsummering</h2><div id="bf-mat" style="display:grid;gap:14px">${matHtml(v)}</div>
+        <div class="form">${live("kapp", "Kapp på rør (%)", v.kapp)}${live("svinn", "Svinn deler (%)", v.svinn)}${live("usable", "Brukbar lengde per rør (m)", v.usable)}</div></section>
+      <section class="panel"><h2>Befaring</h2><div class="form">
+        ${fieldHtml({ k: "navn", l: "Navn / tittel", w: 4, bind: true, ph: "F.eks. Rørbytte HPU" }, v.navn, "b-")}
+        ${fieldHtml({ k: "kunde", l: "Kunde", w: 4, bind: true }, v.kunde, "b-")}
+        ${fieldHtml({ k: "sted", l: "Fartøy / anlegg", w: 4, bind: true }, v.sted, "b-")}
+        ${fieldHtml({ k: "kontakt", l: "Kontaktperson", w: 2, bind: true }, v.kontakt, "b-")}
+        ${fieldHtml({ k: "dato", l: "Dato", w: 2, bind: true, type: "date" }, v.dato, "b-")}
+        ${fieldHtml({ k: "deltakere", l: "Deltakere", w: 4, bind: true }, v.deltakere, "b-")}</div>
+        <div class="fld"><span class="label">Status</span>${chips("status", v.status === "ferdig" ? "ferdig" : "aktiv", [["aktiv", "Pågår"], ["ferdig", "Ferdig"]])}</div>
+        <div><button class="btn danger ${S.armed === "delsurvey" ? "armed" : ""}" data-a="delsurvey">${S.armed === "delsurvey" ? "Trykk igjen for å slette" : "Slett befaringen"}</button></div></section>`;
+  }
+  function checksTab(v) {
+    const row = ([k, l]) => {
+      const c = (v.checks || []).find((x) => x.rid === k) || {};
+      return `<div class="chkrow"><button type="button" class="chkbtn" data-a="chk" data-k="${k}" aria-pressed="${!!c.ok}" aria-label="${esc(l)}">${ICONS.check}</button><span class="t">${esc(l)}</span><input data-chk="${k}" value="${esc(c.note || "")}" placeholder="Notat" aria-label="Notat: ${esc(l)}"></div>`;
+    };
+    return `<section class="panel"><h2>Sjekkliste</h2><div>${BF_CHECKS.map(row).join("")}</div></section>`;
+  }
+  function surveyText(v) {
+    const t = surveyMat(v), L = [], line = (s) => L.push(s);
+    line("BEFARING: " + surveyTitle(v));
+    for (const [k, val] of [["Kunde", v.kunde], ["Fartøy/anlegg", v.sted], ["Kontaktperson", v.kontakt], ["Dato", fmtDate(v.dato)], ["Deltakere", v.deltakere], ["Status", STATUS[v.status === "ferdig" ? "ferdig" : "aktiv"]]]) if (val) line(k + ": " + val);
+    line(""); line("MATERIALOPPSUMMERING");
+    line(`Lagt inn: ${pctText(t.kapp)} kapp på rør og ${pctText(t.svinn)} svinn på muttere og snittringer. Rør leveres i ${PIPE_LEN} m-lengder, brukbar lengde per rør ${nf(t.usable, 1)} m.`);
+    if (t.list.length) {
+      line(""); line("Rør:");
+      for (const g of t.list) line(`  ${g.key}: ${nf(g.m, 1)} m + ${pctText(t.kapp)} = ${nf(g.mTot, 1)} m, ${countOf(g.lengths, "lengde", "lengder")} à ${PIPE_LEN} m`);
+      if (t.list.some((g) => g.joints)) { line("Skjøter (hver: 1 rett kobling + 2 muttere + 2 snittringer):"); for (const g of t.list) if (g.joints) line(`  ${g.key}: ${countOf(g.joints, "rett kobling", "rette koblinger")}`); }
+      line("Endekoblinger:");
+      for (const g of t.list) for (const [e, n] of Object.entries(g.ends)) line(`  ${g.key}, ${e}: ${n} stk`);
+      if (t.list.some((g) => g.nuts)) { line("Muttere og snittringer (hver):"); for (const g of t.list) if (g.nuts) line(`  ${g.key}: ${g.nuts} + ${pctText(t.svinn)} = ${g.nutsTot} stk`); }
+      line(`Klammer totalt: ${t.clamps} stk`); line(`Bøyer totalt: ${t.bends} stk`);
+    }
+    line(""); line("RØRSTREKK");
+    if (!(v.runs || []).length) line("Ingen registrert.");
+    for (const r of v.runs || []) {
+      line(`${r.tag || "-"}${r.sys ? " " + r.sys : ""}: ${r.fra || "?"} -> ${r.til || "?"}`);
+      line(`  ${normOd(r.od)} ${r.mat || ""}${r.wp ? ", " + r.wp : ""}. Koblinger: ${r.e1 || "-"} / ${r.e2 || "-"}`);
+      line(`  ${nf(num(r.len), 1)} m, ${countOf(Math.round(num(r.bends)), "bøy", "bøyer")}, ${countOf(Math.round(num(r.clamps)), "klammer", "klammer")}, ${countOf(runJoints(r, t.usable), "skjøt", "skjøter")}. Status: ${r.status || RUN_STATUS[0]}`);
+      if (r.flag) line("  VARSEL: " + r.flag);
+      if (r.note) line("  Notat: " + r.note);
+      const ph = (v.photos || []).filter((p) => p.hose === ridOf(r)).length;
+      if (ph) line(`  Bilder: ${ph} i appen`);
+    }
+    line(""); line("SJEKKLISTE");
+    for (const [k, l] of BF_CHECKS) { const c = (v.checks || []).find((x) => x.rid === k) || {}; line(`[${c.ok ? "x" : " "}] ${l}${c.note ? ": " + c.note : ""}`); }
+    return L.join("\n");
+  }
+  function surveyReportTab(v) {
+    return `<section class="panel"><h2>Rapport</h2><div class="row"><button class="btn primary" data-a="copy">Kopier til utklippstavle</button></div>
+      <p class="hint">Lim inn i e-post eller tilbud. Bilder blir ikke med i teksten.</p><div class="preview" id="preview">${esc(surveyText(v))}</div></section>`;
+  }
+  function newSurvey() {
+    const id = "bf-" + uid8(), set = S.settings;
+    const pick = (k) => (set["bf_" + k] != null && set["bf_" + k] !== "" ? set["bf_" + k] : String(BF_DEFAULT[k]).replace(".", ","));
+    S.surveys[id] = { type: "survey", id, navn: "", kunde: "", sted: "", kontakt: "", dato: today(), deltakere: set.tech || "", status: "aktiv", kapp: pick("kapp"), svinn: pick("svinn"), usable: pick("usable"), runs: [], checks: [], photos: [], created: Date.now(), updated: Date.now() };
+    touch(id);
+    S.view = "survey"; S.sid = id; S.jobId = null; S.tab = "oversikt"; S.edit = null; render(); window.scrollTo(0, 0);
   }
   function chips(name, cur, opts) {
     return `<div class="seg" role="group">${opts.map(([k, l]) => `<button data-a="${name}" data-v="${k}" aria-pressed="${cur === k}">${l}</button>`).join("")}</div>`;
@@ -1776,8 +1985,8 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Upload photos taken on this device that are not in the bucket yet.
   async function uploadPhotos() {
     if (!sb || !navigator.onLine) return;
-    for (const job of Object.values(S.jobs)) {
-      if (!job || job.type !== "job" || pending.has(job.id)) continue;
+    for (const job of Object.values(S.jobs).concat(Object.values(S.surveys))) {
+      if (!job || (job.type !== "job" && job.type !== "survey") || pending.has(job.id)) continue;
       let did = false;
       for (const p of job.photos || []) {
         if (p.up) continue;
@@ -1803,7 +2012,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   async function hydratePhotos() {
     for (const img of document.querySelectorAll("img[data-pid]")) {
       if (img.src) continue;
-      const pid = img.dataset.pid, job = S.jobs[img.dataset.job];
+      const pid = img.dataset.pid, job = storeOf(img.dataset.job)[img.dataset.job];
       const p = job && (job.photos || []).find((x) => x.id === pid);
       if (!p) continue;
       if (!photoUrls[pid]) { const b = await photoBlob(job.id, p); if (b) photoUrls[pid] = URL.createObjectURL(b); }
@@ -1814,7 +2023,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   const hoseLabel = (job, rid) => { const h = (job.hoses || []).find((x) => ridOf(x) === rid); return h ? "Pos " + (h.pos || "–") : ""; };
   function photoThumbs(job, list, big) {
     return `<div class="photos${big ? " big" : ""}">${list.map((p) => `<figure class="ph"><button type="button" class="ph-open" data-a="viewphoto" data-pid="${esc(p.id)}" aria-label="Vis bildet"><img data-job="${esc(job.id)}" data-pid="${esc(p.id)}" alt=""></button>
-      ${big ? `<figcaption><span>${esc(p.hose ? hoseLabel(job, p.hose) || "Slange" : "Jobb")}</span><button type="button" class="btn sm danger ${S.armed === "ph" + p.id ? "armed" : ""}" data-a="delphoto" data-pid="${esc(p.id)}" aria-label="Slett bildet">${S.armed === "ph" + p.id ? "Slett?" : "×"}</button></figcaption>` : ""}</figure>`).join("")}</div>`;
+      ${big ? `<figcaption><span>${esc(job.type === "survey" ? runLabel(job, p.hose) : p.hose ? hoseLabel(job, p.hose) || "Slange" : "Jobb")}</span><button type="button" class="btn sm danger ${S.armed === "ph" + p.id ? "armed" : ""}" data-a="delphoto" data-pid="${esc(p.id)}" aria-label="Slett bildet">${S.armed === "ph" + p.id ? "Slett?" : "×"}</button></figcaption>` : ""}</figure>`).join("")}</div>`;
   }
   function photosPanel(j) {
     const list = j.photos || [];
@@ -1853,7 +2062,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     else if (m === "items") list = `<div class="ledger">${groupItems(rows).map((g) => `<div class="grp"><span>${esc(g.label)}</span></div>` + g.rows.map(({ r, i }) => rowHtml(m, r, i, editing && editing.idx === i)).join("")).join("")}</div>`;
     else if (m === "hours") list = `<div class="ledger">${rows.map((r, i) => ({ r, i })).sort((a, b) => String(b.r.date + b.r.from).localeCompare(String(a.r.date + a.r.from))).map(({ r, i }) => rowHtml(m, r, i, editing && editing.idx === i)).join("")}</div>`;
     // Hoses: newest on top, only here on screen. The stored order, and so the report and the Excel lists, stays by position.
-    else if (m === "hoses") list = `<div class="ledger">${rows.map((r, i) => ({ r, i })).reverse().map(({ r, i }) => rowHtml(m, r, i, editing && editing.idx === i)).join("")}</div>`;
+    else if (m === "hoses" || m === "runs") list = `<div class="ledger">${rows.map((r, i) => ({ r, i })).reverse().map(({ r, i }) => rowHtml(m, r, i, editing && editing.idx === i)).join("")}</div>`;
     else list = `<div class="ledger">${rows.map((r, i) => rowHtml(m, r, i, editing && editing.idx === i)).join("")}</div>`;
     const head = `<div class="row"><h2 class="grow">${def.title}</h2><span class="label">${rows.length} rader</span></div>`;
     // The hose summary goes under the list, so the newest hose is right below the form.
@@ -1872,6 +2081,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     const last = (S.last && S.last[j.id + m]) || null;
     if (last) for (const k of def.keep) if (last[k] != null) o[k] = last[k];
     if (m === "hoses") { const ps = (j.hoses || []).map((h) => parseInt(h.pos, 10)).filter((n) => isFinite(n)); o.pos = String(ps.length ? Math.max.apply(null, ps) + 1 : 1); }
+    if (m === "runs") { const ns = (j.runs || []).map((r) => parseInt(String(r.tag).replace(/\D+/g, ""), 10)).filter((n) => isFinite(n)); o.tag = "R-" + String((ns.length ? Math.max.apply(null, ns) : 0) + 1).padStart(2, "0"); }
     return o;
   }
   function rowHtml(m, r, i, isEdit) {
@@ -1883,6 +2093,17 @@ details summary { cursor: pointer; padding: 4px 0; }
         <div class="d">${esc([[r.utstyr, r.sted].filter(Boolean).join(", "), r.hylse && "Hylse " + r.hylse, addText(r), r.bar && r.bar + " bar", r.note].filter(Boolean).join(" · "))}</div>`;
       below = `        <div class="hline" aria-label="${esc(`Ende 1 ${r.e1 || "ikke satt"}, ${nf(r.len, 0)} mm, ende 2 ${r.e2 || "ikke satt"}`)}"><span class="end">${esc(r.e1 || "–")}</span><span class="bar"><span>${nf(r.len, 0)} mm</span></span><span class="end">${esc(r.e2 || "–")}</span></div>
         ${(() => { const job = S.jobs[S.jobId], ph = job ? (job.photos || []).filter((p) => p.hose && p.hose === ridOf(r)) : []; return (ph.length ? photoThumbs(job, ph, false) : "") + `<button type="button" class="linkbtn" data-a="addphoto" data-hose="${esc(ridOf(r) || "")}">+ Bilde</button>`; })()}`;
+    } else if (m === "runs") {
+      const job = S.surveys[S.sid], ph = job ? (job.photos || []).filter((p) => p.hose === ridOf(r)) : [], st = r.status || RUN_STATUS[0];
+      const joints = job ? runJoints(r, num(job.usable) > 0 ? num(job.usable) : BF_DEFAULT.usable) : 0;
+      tag = esc(r.tag || "–");
+      main = `<strong class="num">${esc(normOd(r.od))}</strong> <span class="d">${esc([r.mat, r.sys].filter(Boolean).join(" · "))}</span>
+        <div class="d">${esc((r.fra || "?") + " → " + (r.til || "?"))}</div>
+        <div class="d">${esc([nf(num(r.len), 1) + " m", (r.bends ? countOf(Math.round(num(r.bends)), "bøy", "bøyer") : ""), (r.clamps ? Math.round(num(r.clamps)) + " klammer" : ""), countOf(joints, "skjøt", "skjøter"), r.wp].filter(Boolean).join(" · "))}</div>
+        <div class="d">${esc((r.e1 || "–") + " / " + (r.e2 || "–"))}</div>
+        ${r.note ? `<div class="d">${esc(r.note)}</div>` : ""}`;
+      below = `${r.flag ? `<div class="flag">Varsel: ${esc(r.flag)}</div>` : ""}${ph.length ? photoThumbs(job, ph, true) : ""}
+        <div class="runbtns"><button type="button" class="pill runst ${RUN_PILL[st] || "venter"}" data-a="runstatus" data-i="${i}" title="Trykk for å endre status">${esc(st)}</button><button type="button" class="btn" data-a="addphoto" data-hose="${esc(ridOf(r) || "")}">+ Bilde</button></div>`;
     } else if (m === "tests") {
       const res = testResult(r);
       tag = `<span class="verdict ${res || "none"}">${res === "ok" ? "Godkjent" : res === "fail" ? "Ikke godkjent" : "Ikke vurdert"}</span>`;
@@ -1899,7 +2120,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       tag = `<span class="num">${fmtMin(rowMin(r))}</span>`;
       main = `<strong class="num">${r.from && r.to ? esc(r.from) + "–" + esc(r.to) : ""}</strong> <span class="kode">${esc(rowKode(r))}</span><div class="d">${esc([fmtDate(r.date), r.tech, r.desc].filter(Boolean).join(" · "))}</div>`;
     }
-    return `<div class="lrow ${m === "hoses" ? "hose " : ""}${isEdit ? "editing" : ""}"><span class="tag">${tag}</span><div class="main">${main}</div>${acts}${below ? `<div class="below">${below}</div>` : ""}</div>`;
+    return `<div class="lrow ${m === "hoses" ? "hose " : m === "runs" ? "run " : ""}${isEdit ? "editing" : ""}"><span class="tag">${tag}</span><div class="main">${main}</div>${acts}${below ? `<div class="below">${below}</div>` : ""}</div>`;
   }
   function otBox(rows) {
     const ot = beregnOvertid(rows || []);
@@ -1968,8 +2189,13 @@ details summary { cursor: pointer; padding: 4px 0; }
       ${fieldHtml({ k: "email", l: "Standard e-post for rapport", w: 4, type: "email", ph: "ordre@firma.no" }, S.settings.email, "set-")}
       ${fieldHtml({ k: "tech", l: "Ditt navn (forslag på timer)", w: 4 }, S.settings.tech, "set-")}</div>
       <p class="hint">Brukes som forslag i nye jobber.</p></section>
+      ${modOn("befaring") ? `<section class="panel"><h2>Befaring</h2><div class="form">
+      ${fieldHtml({ k: "bf_kapp", l: "Kapp på rør (%)", w: 2, num: true, ph: "15" }, S.settings.bf_kapp, "set-")}
+      ${fieldHtml({ k: "bf_svinn", l: "Svinn på deler (%)", w: 2, num: true, ph: "10" }, S.settings.bf_svinn, "set-")}
+      ${fieldHtml({ k: "bf_usable", l: "Brukbar lengde per rør (m)", w: 4, num: true, ph: "5,5" }, S.settings.bf_usable, "set-")}</div>
+      <p class="hint">Standard for nye befaringer. Tallene kan også justeres inne i hver befaring. Står et felt tomt, brukes tallet som vises i det.</p></section>` : ""}
       <section class="panel"><h2>Moduler</h2>
-      <p class="hint">Velg hvilke faner du vil se i jobbene. Jobb og Rapport er alltid med. En fane du har slått av vises likevel i en jobb der noe allerede er registrert, for eksempel en jobb du har fått tildelt.</p>
+      <p class="hint">Velg hva du vil se i appen. Jobb og Rapport er alltid med i jobbene. En fane du har slått av vises likevel i en jobb der noe allerede er registrert, for eksempel en jobb du har fått tildelt. Befaring ligger i menyen nederst og blir stående så lenge du har befaringer.</p>
       <div class="modlist">${MOD_TOGGLES.map(([k, l, d]) => `<label class="row" for="set-${modKey(k)}" style="gap:8px"><input type="checkbox" id="set-${modKey(k)}" name="${modKey(k)}"${modOn(k) ? " checked" : ""}> <span><b>${esc(l)}</b> <span class="d">· ${esc(d)}</span></span></label>`).join("")}</div></section>
       ${account}
       ${S.isAdmin ? `<section class="panel"><span class="label">Kollegaers jobber</span><p class="hint">${(() => { const t = teamJobs(), n = t.filter((j) => j.status !== "sendt").length; return t.length ? `${n} ${n === 1 ? "jobb pågår" : "jobber pågår"} hos kollegaene (${t.length} totalt).` : "Kollegaene har ingen jobber ennå."; })()}</p>
@@ -2056,20 +2282,41 @@ details summary { cursor: pointer; padding: 4px 0; }
     if (!e.target.closest(".ac") && !(e.target.dataset && e.target.dataset.cat)) closeAc();
     const b = e.target.closest("[data-a]");
     if (!b) return;
-    const a = b.dataset.a, j = S.jobs[S.jobId];
-    if (a !== "deljob" && a !== "delrow" && a !== "odel" && a !== "delphoto" && S.armed) { S.armed = null; }
+    const a = b.dataset.a, j = curDoc();
+    if (a !== "deljob" && a !== "delsurvey" && a !== "delrow" && a !== "odel" && a !== "delphoto" && S.armed) { S.armed = null; }
     switch (a) {
       case "update": applyUpdate(); break;
       case "signup": authAction("signup"); break;
       case "forgot": authAction("forgot"); break;
       case "logout": logout(); break;
       case "syncnow": await syncNow(); S.keepScroll = true; render(); break;
-      case "new": S.home = "jobs"; newJob(false); break;
+      case "new": if (S.view === "list" && S.home === "surveys") { newSurvey(); break; } S.home = "jobs"; newJob(false); break;
+      case "opensurvey": if (!S.surveys[b.dataset.id]) break; S.view = "survey"; S.sid = b.dataset.id; S.jobId = null; S.tab = "oversikt"; S.edit = null; render(); window.scrollTo(0, 0); break;
+      case "bfilter": S.bfilter = b.dataset.v; render(); break;
+      case "chk": {
+        const k = b.dataset.k;
+        j.checks = j.checks || [];
+        let c = j.checks.find((x) => x.rid === k);
+        if (!c) { c = { rid: k, ok: false, note: "" }; j.checks.push(c); }
+        c.ok = !c.ok; touch(j.id); S.keepScroll = true; render(); break;
+      }
+      case "runstatus": {
+        const r = (j.runs || [])[+b.dataset.i];
+        if (!r) break;
+        r.status = RUN_STATUS[(RUN_STATUS.indexOf(r.status || RUN_STATUS[0]) + 1) % RUN_STATUS.length];
+        touch(j.id); S.keepScroll = true; render(); break;
+      }
+      case "delsurvey":
+        if (S.armed !== "delsurvey") { S.armed = "delsurvey"; S.keepScroll = true; render(); return; }
+        S.armed = null; S.ownerOf[j.id] = ownerOf(j);
+        if ((j.photos || []).length) { const paths = j.photos.filter((p) => p.up).map((p) => photoPath(j.id, p)); if (paths.length && sb) sb.storage.from("photos").remove(paths).catch(() => {}); j.photos.forEach((p) => idbDel(p.id)); }
+        delete S.surveys[j.id]; dirty.add(j.id); flush(j.id);
+        S.view = "list"; S.sid = null; render(); toast("Befaringen er slettet"); break;
       case "example": newJob(true); break;
       case "open": if (!S.jobs[b.dataset.id]) break; S.backTo = S.view === "team" ? "team" : "list"; S.assignOpen = false; S.view = "job"; S.jobId = b.dataset.id; S.tab = b.dataset.tab || "info"; S.edit = null; render(); window.scrollTo(0, 0); break;
-      case "back": S.view = S.view === "job" && S.backTo === "team" ? "team" : "list"; S.backTo = ""; S.jobId = null; S.edit = null; render(); window.scrollTo(0, 0); break;
+      case "back": S.view = S.view === "job" && S.backTo === "team" ? "team" : "list"; S.backTo = ""; S.jobId = null; S.sid = null; S.edit = null; render(); window.scrollTo(0, 0); break;
       case "settings": S.view = "settings"; render(); break;
-      case "home": S.view = "list"; S.jobId = null; S.home = b.dataset.v; render(); window.scrollTo(0, 0); break;
+      case "home": S.view = "list"; S.jobId = null; S.sid = null; S.q = ""; S.home = b.dataset.v; render(); window.scrollTo(0, 0); break;
       case "filter": S.filter = b.dataset.v; render(); break;
       case "tfilter": S.tfilter = b.dataset.v; render(); break;
       case "ufilter": S.ufilter = b.dataset.v; render(); break;
@@ -2118,7 +2365,11 @@ details summary { cursor: pointer; padding: 4px 0; }
       case "delrow": {
         const key = b.dataset.m + b.dataset.i;
         if (S.armed !== key) { S.armed = key; S.keepScroll = true; render(); return; }
-        S.armed = null; j[b.dataset.m].splice(+b.dataset.i, 1); S.edit = null; touch(j.id); S.keepScroll = true; render(); break;
+        S.armed = null;
+        const gone = j[b.dataset.m].splice(+b.dataset.i, 1)[0];
+        // A pipe run takes its photos with it.
+        if (b.dataset.m === "runs" && gone) for (const p of (j.photos || []).filter((x) => x.hose === ridOf(gone))) { idbDel(p.id); if (p.up && sb) sb.storage.from("photos").remove([photoPath(j.id, p)]).catch(() => {}); j.photos = j.photos.filter((x) => x.id !== p.id); }
+        S.edit = null; touch(j.id); S.keepScroll = true; render(); break;
       }
       case "ocycle": { const f = findOrder(b.dataset.id); if (f) { f.o.status = NEXT_STATUS[f.o.status] || "bestilt"; touch(orderDoc(f.jobId)); S.keepScroll = true; render(); } break; }
       case "odel": {
@@ -2143,7 +2394,7 @@ details summary { cursor: pointer; padding: 4px 0; }
         toast(n + " fjernet"); S.keepScroll = true; render(); break;
       }
       case "copy": {
-        const txt = summaryText(j);
+        const txt = j.type === "survey" ? surveyText(j) : summaryText(j);
         try { await navigator.clipboard.writeText(txt); toast("Teksten er kopiert"); }
         catch (err) { const p = $("#preview"); const r = document.createRange(); r.selectNodeContents(p); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Teksten er merket. Kopier med Ctrl+C eller hold inne."); }
         break;
@@ -2244,7 +2495,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       return;
     }
     if (!form.dataset.mod) return;
-    const m = form.dataset.mod, j = S.jobs[S.jobId];
+    const m = form.dataset.mod, j = curDoc();
     const o = readForm(form, MODS[m].fields);
     const miss = MODS[m].fields.filter((f) => f.req && !o[f.k]);
     if (miss.length) { toast("Fyll ut: " + miss.map((f) => f.l).join(", ")); const el = form.elements[miss[0].k]; if (el) el.focus(); return; }
@@ -2259,6 +2510,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       }
       S.dimOk = "";
     }
+    if (m === "runs") o.od = normOd(o.od);
     if (m === "items" && !o.nr && !o.desc) { toast("Skriv inn varenr. eller beskrivelse"); $("#items-nr").focus(); return; }
     if (m === "items" && o.nr && !o.desc) o.desc = katName(o.nr);
     let add = [o];
@@ -2273,12 +2525,12 @@ details summary { cursor: pointer; padding: 4px 0; }
     if (S.edit && S.edit.mod === m) { j[m].splice(S.edit.idx, 1, ...add); S.edit = null; toast("Endringen er lagret"); }
     else {
       j[m].push(...add);
-      toast(m === "hoses" ? "Slange " + (o.pos || "") + " lagt til" : m === "hours" ? (add.length > 1 ? "Delt i " + add.length + " poster" : "Tid registrert") : "Lagt til");
+      toast(m === "runs" ? "Rørstrekk " + (o.tag || "") + " lagt til" : m === "hoses" ? "Slange " + (o.pos || "") + " lagt til" : m === "hours" ? (add.length > 1 ? "Delt i " + add.length + " poster" : "Tid registrert") : "Lagt til");
     }
     S.last = S.last || {}; S.last[j.id + m] = o;
     touch(j.id);
     render();
-    const focusId = { hoses: "hoses-len", items: "items-nr", hours: "hours-from" }[m];
+    const focusId = { hoses: "hoses-len", items: "items-nr", hours: "hours-from", runs: "runs-fra" }[m];
     const f2 = focusId && $("#" + focusId); if (f2) f2.focus();
   });
 
@@ -2293,13 +2545,30 @@ details summary { cursor: pointer; padding: 4px 0; }
     const t = e.target;
     if (t.dataset && t.dataset.cat) showAc(t);
     if (t.id === "q") { S.q = t.value; const pos = t.selectionStart; render(); const q = $("#q"); q.focus(); try { q.setSelectionRange(pos, pos); } catch (x) {} return; }
-    if (t.id && t.id.startsWith("set-")) { S.settings[t.name] = t.type === "checkbox" ? t.checked : t.value; touch("settings"); return; }
+    if (t.id && t.id.startsWith("set-")) {
+      S.settings[t.name] = t.type === "checkbox" ? t.checked : t.value; touch("settings");
+      if (t.type === "checkbox") { S.keepScroll = true; render(); }   // the bottom menu and the Befaring settings follow the modules
+      return;
+    }
     if (t.id === "hours-from" || t.id === "hours-to" || t.id === "hours-date") {
       const p = $("#hours-prev"); if (p) p.textContent = hoursPreview($("#hours-from").value, $("#hours-to").value, $("#hours-date").value);
       return;
     }
-    const j = S.jobs[S.jobId];
+    const j = curDoc();
     if (!j) return;
+    if (t.dataset.chk) {
+      j.checks = j.checks || [];
+      let c = j.checks.find((x) => x.rid === t.dataset.chk);
+      if (!c) { c = { rid: t.dataset.chk, ok: false, note: "" }; j.checks.push(c); }
+      c.note = t.value; touch(j.id);
+      return;
+    }
+    if (t.dataset.f && j.type === "survey") {
+      j[t.dataset.f] = t.value; touch(j.id);
+      const h1 = $(".top h1"); if (h1) h1.textContent = surveyTitle(j);
+      if (t.dataset.live) { const m = $("#bf-mat"); if (m) m.innerHTML = matHtml(j); }
+      return;
+    }
     if (t.dataset.f) {
       j[t.dataset.f] = t.value;
       touch(j.id);
