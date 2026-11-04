@@ -296,7 +296,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-11-04.2";
+  const APP_VERSION = "2026-11-04.3";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -417,7 +417,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   const UNITS = ["stk", "m", "dm", "liter", "kg", "sett", "pose", "pk"];
   const ORDER_UNITS = ["stk", "m", "rull", "eske", "sett", "liter"];
   const JTYPES = { felt: "Felt", butikk: "Butikk", verksted: "Verksted" };
-  const RUN_ENDS = ["24° DIN", "SAE-flens", "Sveis", "Annet"];
+  const RUN_ENDS = ["Ermeto", "SAE-flens", "Sveis", "Annet"];
   const RUN_STATUS = ["Ikke målt", "Mal laget", "Målt"];
   const MODS = {
     hoses: {
@@ -611,6 +611,8 @@ details summary { cursor: pointer; padding: 4px 0; }
   function ensureRids(job) {
     if (!job || (job.type !== "job" && job.type !== "survey")) return job;
     for (const k of ROW_LISTS) (job[k] || []).forEach((r, i) => { if (r && !r.rid && !r.id) r.rid = "L" + hashStr(k + i + JSON.stringify(r)); });
+    // Pipe ends registered under the earlier name.
+    for (const r of job.runs || []) for (const k of ["e1", "e2"]) if (r[k] === "24° DIN") r[k] = "Ermeto";
     return job;
   }
   const ridOf = (r) => r.rid || r.id;
@@ -1610,7 +1612,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       for (const e of [r.e1, r.e2]) {
         const t = e || "Annet";
         g.ends[t] = (g.ends[t] || 0) + 1;
-        if (t === "24° DIN") g.nuts += 1;
+        if (t === "Ermeto") g.nuts += 1;
       }
       clamps += Math.max(0, Math.round(num(r.clamps))); bends += Math.max(0, Math.round(num(r.bends)));
     }
@@ -1752,7 +1754,7 @@ details summary { cursor: pointer; padding: 4px 0; }
         inner += table(`<th align="left" colspan="2" style="${F}padding:8px 10px;background:${SOFT};border-bottom:2px solid ${LINE};font-size:14px;color:${INK}">${e(g.od)} ${e(g.mat)}</th>`, rows) + `<div style="height:8px"></div>`;
       }
       inner += table(th("Totalt", "") + th("", ""), `<tr>${td("Klammer")}${td(`<b>${t.clamps} stk</b>`, R)}</tr><tr>${td("Bøyer")}${td(`<b>${t.bends} stk</b>`, R)}</tr>`);
-      inner += small("Hver skjøt: 1 rett kobling + 2 muttere + 2 snittringer. Hver 24°-ende: 1 kobling + 1 mutter + 1 snittring.");
+      inner += small("Hver skjøt: 1 rett kobling + 2 muttere + 2 snittringer. Hver Ermeto-ende: 1 kobling + 1 mutter + 1 snittring.");
       out.push(section("Materialoppsummering", inner));
     }
 
