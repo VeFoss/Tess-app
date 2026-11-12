@@ -296,7 +296,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-11-12.5";
+  const APP_VERSION = "2026-11-12.6";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -434,6 +434,8 @@ details summary { cursor: pointer; padding: 4px 0; }
   const LAGER = ["", "L90 Tess Haugesund", "L94 Tess Kårstø", "L92 Tess Karmøy", "L73 Tess Ølen", "M90", "M94", "M73"];
   const ORDER_UNITS = ["stk", "m", "rull", "eske", "sett", "liter"];
   const JTYPES = { felt: "Felt", butikk: "Butikk", verksted: "Verksted" };
+  // Twist between the two ends of a hose when both are angled (Coupling Orientation in the register). Empty = not measured.
+  const ORIENT = ["", "0°", "45°", "90°", "135°", "180°", "225°", "270°", "315°"];
   const RUN_ENDS = ["Ermeto", "SAE-flens", "Sveis", "Annet"];
   const RUN_STATUS = ["Ikke målt", "Mal laget", "Målt"];
   const MODS = {
@@ -450,6 +452,7 @@ details summary { cursor: pointer; padding: 4px 0; }
         { k: "e2", l: "Ende 2 (innsats)", w: 2, cat: true, lsrc: ["e1", "e2"] },
         { k: "hylse", l: "Hylse", w: 2, ph: "65125-06", cat: true },
         { k: "bar", l: "Trykk (bar)", w: 2, num: true },
+        { k: "orient", l: "Vridning mellom endene", w: 2, opts: ORIENT },
         { k: "note", l: "Merknad", w: 4 },
         { k: "a1", l: "Add A", w: 1, cat: true, group: "add", lsrc: ["a1", "b1", "c1", "a2", "b2", "c2"], end: 1 },
         { k: "b1", l: "Add B", w: 1, cat: true, group: "add", lsrc: ["a1", "b1", "c1", "a2", "b2", "c2"], end: 1 },
@@ -1091,6 +1094,7 @@ details summary { cursor: pointer; padding: 4px 0; }
         if (h.hylse) parts.push("Hylse " + h.hylse);
         if (addText(h)) parts.push(addText(h));
         if (h.bar) parts.push(h.bar + " bar");
+        if (h.orient) parts.push("Vridning " + h.orient);
         if (h.note) parts.push(h.note);
         line(parts.join(" | "));
       }
@@ -1194,7 +1198,7 @@ details summary { cursor: pointer; padding: 4px 0; }
 
     // Hoses
     if ((job.hoses || []).length) {
-      const rows = job.hoses.map((h) => `<tr>${td(`<b>${e(h.pos || "–")}</b>`, "white-space:nowrap;")}${td(`<b>${e(h.type)}</b>${small(e([katName(h.type), h.utstyr, h.sted].filter(Boolean).join(" · ")))}`)}${td(`${e(nf(h.len, 0))} mm${num(h.qty) > 1 ? ` × ${e(h.qty)}` : ""}`, R)}${td(`${e(h.e1 || "–")} / ${e(h.e2 || "–")}${small(e([h.hylse && "Hylse " + h.hylse, addText(h), h.bar && h.bar + " bar"].filter(Boolean).join(" · ")))}`)}${td(e(h.note || ""))}</tr>`).join("");
+      const rows = job.hoses.map((h) => `<tr>${td(`<b>${e(h.pos || "–")}</b>`, "white-space:nowrap;")}${td(`<b>${e(h.type)}</b>${small(e([katName(h.type), h.utstyr, h.sted].filter(Boolean).join(" · ")))}`)}${td(`${e(nf(h.len, 0))} mm${num(h.qty) > 1 ? ` × ${e(h.qty)}` : ""}`, R)}${td(`${e(h.e1 || "–")} / ${e(h.e2 || "–")}${small(e([h.hylse && "Hylse " + h.hylse, addText(h), h.bar && h.bar + " bar", h.orient && "Vridning " + h.orient].filter(Boolean).join(" · ")))}`)}${td(e(h.note || ""))}</tr>`).join("");
       let inner = table(th("Pos") + th("Slange / sted") + th("Lengde", R) + th("Ender / hylse") + th("Merknad"), rows);
       const mat = [];
       for (const [t, v] of Object.entries(s.byType)) mat.push([t, katName(t) || "Slange", nf(v.mm / 1000, 2) + " m"]);
@@ -1408,7 +1412,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     const prod = [];
     for (const h of job.hoses || []) {
       const n = Math.max(1, Math.round(num(h.qty) || 1));
-      for (let k = 1; k <= n; k++) prod.push({ id: n > 1 ? `${h.pos || ""}.${k}` : String(h.pos || ""), type: h.type || "", len: num(h.len), f1: h.hylse || "", f2: h.hylse || "", i1: h.e1 || "", i2: h.e2 || "", adds: ADD_KEYS.map((k) => h[k] || ""), eq: h.utstyr || "", sub: h.sted || "", bar: h.bar || "", note: h.note || "" });
+      for (let k = 1; k <= n; k++) prod.push({ id: n > 1 ? `${h.pos || ""}.${k}` : String(h.pos || ""), type: h.type || "", len: num(h.len), f1: h.hylse || "", f2: h.hylse || "", i1: h.e1 || "", i2: h.e2 || "", adds: ADD_KEYS.map((k) => h[k] || ""), eq: h.utstyr || "", sub: h.sted || "", bar: h.bar || "", note: h.note || "", orient: h.orient || "" });
     }
     const measured = prod.slice();
     prod.sort((a, b) => typeCompare(a.type, b.type) || a.len - b.len || String(a.i1).localeCompare(String(b.i1)) || String(a.i2).localeCompare(String(b.i2)));
@@ -1437,8 +1441,9 @@ details summary { cursor: pointer; padding: 4px 0; }
       v["Class"] = "HTSL";
       v["WP (PSI)"] = p.bar ? Math.round(num(p.bar) * 14.5038) : "";
       [["Type Fitting", 0], ["Generic Dim", 1], ["Gender", 2], ["Angle", 3], ["Material Quality", 4]].forEach(([h, k]) => { v[h + " End 1"] = p.i1 ? e1[k] : ""; v[h + " End 2"] = p.i2 ? e2[k] : ""; });
-      // Orientation between the ends only means something when both are angled: then it has to be measured, so it is left open.
-      v["Coupling Orientation"] = p.i1 && p.i2 && e1[3] && e2[3] && (e1[3] === "0°" || e2[3] === "0°") ? "0°" : "";
+      // Orientation between the ends: what was measured on the hose. Otherwise 0° when an end is straight; with two
+      // angled ends and nothing measured it is left open.
+      v["Coupling Orientation"] = p.orient || (p.i1 && p.i2 && e1[3] && e2[3] && (e1[3] === "0°" || e2[3] === "0°") ? "0°" : "");
       v["S1 Plant, Vessel, Unit"] = job.sted || "";
       v["S2 Equipment"] = p.eq;
       v["Other Info"] = p.sub;
@@ -2194,7 +2199,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     if (m === "hoses") {
       tag = esc(r.pos || "–");
       main = `<strong class="num">${esc(r.type)}</strong>${num(r.qty) > 1 ? ` <span class="num">×${esc(r.qty)}</span>` : ""}${katName(r.type) ? ` <span class="d">${esc(katName(r.type))}</span>` : ""}
-        <div class="d">${esc([[r.utstyr, r.sted].filter(Boolean).join(", "), r.hylse && "Hylse " + r.hylse, addText(r), r.bar && r.bar + " bar", r.note].filter(Boolean).join(" · "))}</div>`;
+        <div class="d">${esc([[r.utstyr, r.sted].filter(Boolean).join(", "), r.hylse && "Hylse " + r.hylse, addText(r), r.bar && r.bar + " bar", r.orient && "Vridning " + r.orient, r.note].filter(Boolean).join(" · "))}</div>`;
       below = `        <div class="hline" aria-label="${esc(`Ende 1 ${r.e1 || "ikke satt"}, ${nf(r.len, 0)} mm, ende 2 ${r.e2 || "ikke satt"}`)}"><span class="end">${esc(r.e1 || "–")}</span><span class="bar"><span>${nf(r.len, 0)} mm</span></span><span class="end">${esc(r.e2 || "–")}</span></div>
         ${(() => { const job = S.jobs[S.jobId], ph = job ? (job.photos || []).filter((p) => p.hose && p.hose === ridOf(r)) : []; return (ph.length ? photoThumbs(job, ph, false) : "") + `<button type="button" class="linkbtn" data-a="addphoto" data-hose="${esc(ridOf(r) || "")}">+ Bilde</button>`; })()}`;
     } else if (m === "runs") {
