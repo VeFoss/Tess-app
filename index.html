@@ -296,7 +296,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-11-12.2";
+  const APP_VERSION = "2026-11-12.3";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -415,6 +415,8 @@ details summary { cursor: pointer; padding: 4px 0; }
 
   // ---------- module definitions ----------
   const UNITS = ["stk", "m", "dm", "liter", "kg", "sett", "pose", "pk"];
+  // Warehouses an item can be picked from. The first, empty choice means not stated.
+  const LAGER = ["", "L90 Tess Haugesund", "L94 Tess Kårstø", "L92 Tess Karmøy", "L73 Tess Ølen", "M90", "M94", "M73"];
   const ORDER_UNITS = ["stk", "m", "rull", "eske", "sett", "liter"];
   const JTYPES = { felt: "Felt", butikk: "Butikk", verksted: "Verksted" };
   const RUN_ENDS = ["Ermeto", "SAE-flens", "Sveis", "Annet"];
@@ -450,9 +452,10 @@ details summary { cursor: pointer; padding: 4px 0; }
         { k: "desc", l: "Beskrivelse", w: 2, list: true, cls: "wide-m" },
         { k: "qty", l: "Antall", w: 2, num: true, def: "1", req: true },
         { k: "unit", l: "Enhet", w: 2, opts: UNITS },
+        { k: "lager", l: "Plukket fra lager", w: 4, opts: LAGER },
         { k: "note", l: "Kommentar", w: 4, ph: "Posisjon, farge, ekstra info …" }
       ],
-      keep: ["unit"]
+      keep: ["unit", "lager"]
     },
     hours: {
       title: "Timer", add: "Registrer tid",
@@ -1086,7 +1089,7 @@ details summary { cursor: pointer; padding: 4px 0; }
       hr(); line("MATERIELL:");
       for (const g of groupItems(job.items)) {
         line(`  [${g.label.toUpperCase()}]`);
-        for (const { r } of g.rows) line(`  ${qtyStr(r.qty)} ${r.unit || "stk"}  ${[r.nr, r.desc || katName(r.nr)].filter(Boolean).join("  ")}${r.note ? " (" + r.note + ")" : ""}`);
+        for (const { r } of g.rows) line(`  ${qtyStr(r.qty)} ${r.unit || "stk"}  ${[r.nr, r.desc || katName(r.nr)].filter(Boolean).join("  ")}${r.lager ? "  [Lager " + r.lager + "]" : ""}${r.note ? " (" + r.note + ")" : ""}`);
       }
     }
     const ord = jobOrders(job.id).filter((o) => o.status !== "mottatt");
@@ -1191,7 +1194,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     // Materials
     if ((job.items || []).length) {
       const rows = groupItems(job.items).map((g) => `<tr><td colspan="4" style="${F}padding:12px 10px 4px;font-size:11px;font-weight:700;color:${G};text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid ${LINE}">${e(g.label)}</td></tr>` +
-        g.rows.map(({ r }) => `<tr>${td(`<span style="font-family:Consolas,monospace;font-size:13px">${e(r.nr || "")}</span>`, "white-space:nowrap;")}${td(e(r.desc || katName(r.nr)) + small(e(r.note || "")))}${td(`<b>${e(qtyStr(r.qty))}</b>`, R)}${td(e(r.unit || "stk"), "white-space:nowrap;")}</tr>`).join("")).join("");
+        g.rows.map(({ r }) => `<tr>${td(`<span style="font-family:Consolas,monospace;font-size:13px">${e(r.nr || "")}</span>`, "white-space:nowrap;")}${td(e(r.desc || katName(r.nr)) + small(e([r.lager && "Lager " + r.lager, r.note].filter(Boolean).join(" · "))))}${td(`<b>${e(qtyStr(r.qty))}</b>`, R)}${td(e(r.unit || "stk"), "white-space:nowrap;")}</tr>`).join("")).join("");
       out.push(section("Materiell", table(th("Varenr.") + th("Beskrivelse") + th("Antall", R) + th("Enhet"), rows)));
     }
 
@@ -1506,13 +1509,13 @@ details summary { cursor: pointer; padding: 4px 0; }
   }
   function csvText(job) {
     const q = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-    const rows = [["Kategori", "Varenr", "Beskrivelse", "Antall", "Enhet", "Kommentar"]];
+    const rows = [["Kategori", "Varenr", "Beskrivelse", "Antall", "Enhet", "Kommentar", "Lager"]];
     const s = hoseSums(job);
     for (const [t, v] of Object.entries(s.byType)) rows.push(["Slange", t, katName(t) || "Slange", nf(v.mm / 1000, 2), "m", ""]);
     for (const [t, n] of Object.entries(s.ferr)) rows.push(["Hylse", t, katName(t) || "Hylse", n, "stk", ""]);
     for (const [t, n] of Object.entries(s.ends)) rows.push(["Innsats", t, katName(t) || "Innsats", n, "stk", ""]);
     for (const [t, n] of Object.entries(s.adds)) rows.push(["Add", t, katName(t) || "Add", n, "stk", ""]);
-    for (const g of groupItems(job.items)) for (const { r } of g.rows) rows.push([g.label, r.nr || "", r.desc || katName(r.nr), qtyStr(r.qty), r.unit || "stk", r.note || ""]);
+    for (const g of groupItems(job.items)) for (const { r } of g.rows) rows.push([g.label, r.nr || "", r.desc || katName(r.nr), qtyStr(r.qty), r.unit || "stk", r.note || "", r.lager || ""]);
     for (const [k, v] of Object.entries(hourSums(job).by)) rows.push(["Timer", k, "Arbeid " + k, nf(v / 60, 2), "t", ""]);
     return "﻿" + rows.map((r) => r.map(q).join(";")).join("\r\n");
   }
@@ -2138,10 +2141,10 @@ details summary { cursor: pointer; padding: 4px 0; }
       <div class="row"><button class="btn ${editing ? "dark" : "primary"}" type="submit">${editing ? "Lagre endring" : "+ " + def.add}</button>${editing ? `<button class="btn ghost" type="button" data-a="canceledit">Avbryt</button>` : ""}</div></form>`;
     let list;
     if (!rows.length) list = `<p class="hint">Ingenting registrert ennå.</p>`;
-    else if (m === "items") list = `<div class="ledger">${groupItems(rows).map((g) => `<div class="grp"><span>${esc(g.label)}</span></div>` + g.rows.map(({ r, i }) => rowHtml(m, r, i, editing && editing.idx === i)).join("")).join("")}</div>`;
     else if (m === "hours") list = `<div class="ledger">${rows.map((r, i) => ({ r, i })).sort((a, b) => String(b.r.date + b.r.from).localeCompare(String(a.r.date + a.r.from))).map(({ r, i }) => rowHtml(m, r, i, editing && editing.idx === i)).join("")}</div>`;
-    // Hoses: newest on top, only here on screen. The stored order, and so the report and the Excel lists, stays by position.
-    else if (m === "hoses" || m === "runs") list = `<div class="ledger">${rows.map((r, i) => ({ r, i })).reverse().map(({ r, i }) => rowHtml(m, r, i, editing && editing.idx === i)).join("")}</div>`;
+    // Hoses, pipe runs and items: newest on top, only here on screen. The stored order stays, so the report and the Excel lists
+    // are unchanged, and items are still sorted by kind of part in the report.
+    else if (m === "hoses" || m === "runs" || m === "items") list = `<div class="ledger">${rows.map((r, i) => ({ r, i })).reverse().map(({ r, i }) => rowHtml(m, r, i, editing && editing.idx === i)).join("")}</div>`;
     else list = `<div class="ledger">${rows.map((r, i) => rowHtml(m, r, i, editing && editing.idx === i)).join("")}</div>`;
     const head = `<div class="row"><h2 class="grow">${def.title}</h2><span class="label">${rows.length} rader</span></div>`;
     // The hose summary goes under the list, so the newest hose is right below the form.
@@ -2194,7 +2197,7 @@ details summary { cursor: pointer; padding: 4px 0; }
         <button type="button" class="linkbtn" data-a="testpdf" data-i="${i}">Last ned PDF</button>`;
     } else if (m === "items") {
       tag = `<span class="num">${qtyStr(r.qty)}</span>`;
-      main = `<strong>${esc(itemName(r))}</strong> <span class="d">${esc(r.unit || "stk")}</span><div class="d">${esc([r.nr && r.nr !== itemName(r) ? r.nr : "", r.note].filter(Boolean).join(" · "))}</div>`;
+      main = `<strong>${esc(itemName(r))}</strong> <span class="d">${esc(r.unit || "stk")}</span><div class="d">${esc([r.nr && r.nr !== itemName(r) ? r.nr : "", r.lager && "Lager " + r.lager, r.note].filter(Boolean).join(" · "))}</div>`;
     } else {
       tag = `<span class="num">${fmtMin(rowMin(r))}</span>`;
       main = `<strong class="num">${r.from && r.to ? esc(r.from) + "–" + esc(r.to) : ""}</strong> <span class="kode">${esc(rowKode(r))}</span><div class="d">${esc([fmtDate(r.date), r.tech, r.desc].filter(Boolean).join(" · "))}</div>`;
