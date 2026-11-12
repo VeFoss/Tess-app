@@ -296,7 +296,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-11-12.3";
+  const APP_VERSION = "2026-11-12.4";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -452,7 +452,7 @@ details summary { cursor: pointer; padding: 4px 0; }
         { k: "desc", l: "Beskrivelse", w: 2, list: true, cls: "wide-m" },
         { k: "qty", l: "Antall", w: 2, num: true, def: "1", req: true },
         { k: "unit", l: "Enhet", w: 2, opts: UNITS },
-        { k: "lager", l: "Plukket fra lager", w: 4, opts: LAGER },
+        { k: "lager", l: "Plukket fra lager", w: 4, opts: LAGER, def: () => S.settings.lager || "" },
         { k: "note", l: "Kommentar", w: 4, ph: "Posisjon, farge, ekstra info …" }
       ],
       keep: ["unit", "lager"]
@@ -2269,8 +2269,9 @@ details summary { cursor: pointer; padding: 4px 0; }
     return homeHeader("Innstillinger", false) +
       `<main class="with-bnav"><section class="panel"><h2>Standardverdier</h2><div class="form">
       ${fieldHtml({ k: "email", l: "Standard e-post for rapport", w: 4, type: "email", ph: "ordre@firma.no" }, S.settings.email, "set-")}
-      ${fieldHtml({ k: "tech", l: "Ditt navn (forslag på timer)", w: 4 }, S.settings.tech, "set-")}</div>
-      <p class="hint">Brukes som forslag i nye jobber.</p></section>
+      ${fieldHtml({ k: "tech", l: "Ditt navn (forslag på timer)", w: 4 }, S.settings.tech, "set-")}
+      ${fieldHtml({ k: "lager", l: "Standardlager for varer", w: 4, opts: LAGER }, S.settings.lager || "", "set-")}</div>
+      <p class="hint">Brukes som forslag i nye jobber. Standardlageret står ferdig valgt når du legger inn varer, og du kan velge et annet på hver vare.</p></section>
       ${modOn("befaring") ? `<section class="panel"><h2>Befaring</h2><div class="form">
       ${fieldHtml({ k: "bf_kapp", l: "Kapp på rør (%)", w: 2, num: true, ph: "15" }, S.settings.bf_kapp, "set-")}
       ${fieldHtml({ k: "bf_svinn", l: "Svinn på deler (%)", w: 2, num: true, ph: "10" }, S.settings.bf_svinn, "set-")}
