@@ -296,7 +296,7 @@ details summary { cursor: pointer; padding: 4px 0; }
   // Address (slug) of the e-mail function in Supabase. Shown as "send-report" in the dashboard.
   const SEND_FN = "hyper-function";
   // Bump on every release so devices running a cached copy notice and reload.
-  const APP_VERSION = "2026-11-12.1";
+  const APP_VERSION = "2026-11-12.2";
 
   // ---------- helpers ----------
   const $ = (s, el) => (el || document).querySelector(s);
@@ -2666,7 +2666,7 @@ details summary { cursor: pointer; padding: 4px 0; }
     try {
       const res = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" });
       if (!res.ok) return;
-      const m = (await res.text()).match(/const APP_VERSION = "2026-11-12.1"]+)"/);
+      const m = (await res.text()).match(/const APP_VERSION = "([^"]+)"/);
       if (!m || m[1] === APP_VERSION) return;
       updateReady = m[1];
       const quiet = S.view === "list" || S.view === "login" || S.view === "boot";
